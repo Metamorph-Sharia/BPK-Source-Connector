@@ -1,0 +1,94 @@
+record_id,tier,domain,citation,rationale
+240203,P1,A,UU 4/2023,"Omnibus financial-sector law; regulates financing companies, LPBBTI/fintech lending, ITSK and OJK powers; amends the Sharia Banking Law"
+304105,P1,A,PP 41/2024,OJK levies payable by every licensed financial institution (replaces PP 11/2014)
+350166,P1,A,UU 4/2026,2026 amendment to P2SK; expands financing-services and IT-based funding provisions
+39257,P1,A,UU 21/2011,OJK Law: OJK licensing and supervision mandate over non-bank financial institutions
+39655,P1,A,UU 21/2008,"Statutory definition of sharia principles and the DSN-MUI fatwa role, referenced by non-bank sharia rules"
+241809,P3,A,PP 5/2023,Criminal investigation in the financial services sector (enforcement context)
+38813,P3,A,UU 1/2013,"Microfinance Institutions Law (alternative small-scale route, incl. sharia LKMS)"
+5448,P3,A,PP 11/2014,Predecessor OJK levy regulation (lineage)
+5534,P3,A,PP 89/2014,LKM financing margin and territory caps
+174164,P1,B,Permenkumham 25/2021,"Online fiduciary registration, amendment and deletion (current procedure)"
+45374,P1,B,UU 42/1999,Fiduciary Security Law: collateral basis for vehicle and consumer-goods financing
+5585,P1,B,PP 21/2015,Fiduciary registration procedure and deed fees
+174102,P2,B,Permenkumham 17/2020,Requests for fiduciary data
+37162,P2,B,UU 1/2016,"Guarantee Law: credit and financing guarantees (Jamkrindo/Askrindo, KUR guarantees)"
+40784,P2,B,UU 37/2004,Bankruptcy and PKPU: debtor insolvency and the creditor position of lenders
+112608,P3,B,PMK 23/PMK.010/2017,Revocation of MoF regulations whose authority moved to OJK (explains gaps in the PMK lineage)
+133364,P3,B,Permenkumham 9/2013,Start of electronic fiduciary registration (lineage)
+152710,P3,B,Perpres 110/2020,Revocation of Perpres 9/2009 (explains the lineage break)
+164278,P3,B,PMK 130/PMK.010/2012,Former MoF rule requiring fiduciary registration for motor-vehicle consumer financing (revoked; lineage)
+174250,P3,B,Permenkumham 10/2013,Earlier e-fiduciary registration procedure (lineage)
+174512,P3,B,PMK 30/PMK.010/2010,Former MoF KYC rule for non-bank financial institutions (lineage)
+42292,P3,B,Perpres 9/2009,"Former Presidential regulation on Lembaga Pembiayaan, revoked in 2020: multifinance now rests on OJK/P2SK (lineage)"
+46093,P3,B,UU 4/1996,"Mortgage over land, for property-backed financing"
+64384,P3,B,Keppres 61/1988,Original 1988 financing-institution decree (lineage)
+161806,P1,C,Perpres 10/2021,Positive Investment List: foreign-ownership openness by business field
+168534,P1,C,Perpres 49/2021,Amendment to the Positive Investment List
+246523,P1,C,UU 6/2023,"Job Creation Law: amends the PT, investment and licensing laws"
+319773,P1,C,PP 28/2025,"Risk-based business licensing (OSS-RBA), replacing PP 5/2021"
+332573,P1,C,Permeninves/BKPM 5/2025,Ministry of Investment guideline for risk-based licensing and investment facilities
+350901,P1,C,Permenkum 49/2025,"Establishing, amending and dissolving a PT (current Ministry of Law procedure)"
+39903,P1,C,UU 25/2007,Investment Law: foreign direct investment (PMA) framework
+39965,P1,C,UU 40/2007,Limited Liability Company Law: the legal-entity form required for financing companies and LPBBTI
+161898,P2,C,PP 34/2021,Foreign worker permits (expatriate directors and commissioners)
+169019,P2,C,Peraturan BKPM 5/2021,"BKPM supervision of risk-based licensing (investment activity reporting, LKPM)"
+39182,P2,C,UU 7/2011,Currency Law: mandatory Rupiah use for domestic transactions
+45335,P2,C,UU 24/1999,Foreign-exchange flows: offshore funding and capital movements
+149750,P3,C,UU 11/2020,Original Job Creation Law (lineage; replaced)
+161835,P3,C,PP 5/2021,Previous risk-based licensing PP (lineage)
+168903,P3,C,Peraturan BKPM 4/2021,Previous BKPM licensing guideline (lineage)
+174160,P3,C,Permenkumham 21/2021,Previous PT registration procedure (lineage)
+234926,P3,C,Perpu 2/2022,Job Creation Perppu (lineage)
+43013,P3,C,UU 13/2003,Manpower Law (base for foreign-worker rules)
+122030,P1,D,PP 71/2019,"Electronic systems and transactions (PSE registration, e-signature, data localisation)"
+203049,P1,D,Permenkominfo 5/2020,Private-scope PSE registration: required for lending apps
+203121,P1,D,Permenkominfo 10/2021,Amendment to the private-scope PSE regulation
+229798,P1,D,UU 27/2022,Personal Data Protection Law: borrower data processing
+274494,P1,D,UU 1/2024,Second ITE amendment
+37582,P1,D,UU 19/2016,First ITE amendment
+37589,P1,D,UU 11/2008,"Electronic Information and Transactions Law: e-contracts, e-signatures, electronic system operators"
+150543,P2,D,Permenkominfo 20/2016,Personal data protection in electronic systems (pre-UU PDP ministerial rule)
+126143,P3,D,PP 80/2019,E-commerce trading regulation (partner-merchant financing context)
+165479,P1,E,PP 61/2021,Amendment adding fintech and other reporting parties
+314767,P1,E,Permenkum 2/2025,Verification and supervision of corporate beneficial ownership (current)
+38547,P1,E,UU 8/2010,AML Law: financing companies and LPBBTI are reporting parties
+38846,P1,E,UU 9/2013,Counter-terrorist-financing Law
+5611,P1,E,PP 43/2015,"Reporting parties for AML, including financing companies"
+73583,P1,E,Perpres 13/2018,Beneficial ownership disclosure for corporations
+168889,P2,E,Peraturan PPATK 2/2021,Filing reports through goAML
+168891,P2,E,Peraturan PPATK 1/2021,"Filing STR, CTR and other reports to PPATK"
+172796,P2,E,Peraturan PPATK 11/2020,PEP screening application
+222250,P2,E,Peraturan PPATK 11/2021,Terrorist-financing suspect information system (SIPENDAR)
+222254,P2,E,Peraturan PPATK 14/2021,goAML technical guide for reporting parties
+272064,P2,E,Peraturan PPATK 14/2023,Counter-proliferation financing and immediate blocking
+301756,P2,E,Peraturan PPATK 1/2024,Administrative sanctions for reporting failures
+133129,P3,E,Permenkumham 15/2019,Previous BO implementation rule (lineage)
+133134,P3,E,Permenkumham 21/2019,Previous BO supervision rule (lineage)
+234935,P3,E,UU 1/2023,New Criminal Code: partially revokes criminal provisions of the AML and ITE laws; effective January 2026
+327888,P3,E,Perpres 88/2025,Second amendment to the AML committee Perpres
+41249,P3,E,Perpres 6/2012,National AML coordination committee
+209692,P1,F,Perma 14/2016,Procedure for sharia economic disputes in religious courts
+40154,P1,F,UU 3/2006,Gives religious courts jurisdiction over sharia economic disputes (Art. 49)
+45288,P1,F,UU 8/1999,Consumer Protection Law: standard clauses and consumer rights in financing contracts
+206070,P2,F,Perma 4/2019,"Small-claims amendment (raises the ceiling, adds e-court)"
+209475,P2,F,Perma 2/2015,Small-claims procedure (consumer debt recovery)
+38795,P2,F,UU 50/2009,Second amendment to the Religious Courts Law
+45348,P2,F,UU 30/1999,"Arbitration and ADR (Basyarnas, LAPS SJK)"
+46804,P2,F,UU 7/1989,Religious Courts Law (base)
+209641,P3,F,Perma 1/2016,Court-annexed mediation
+209661,P3,F,Perma 5/2016,Certification of sharia-economy judges
+52959,P3,F,PP 58/2001,Guidance and supervision of consumer protection
+173659,P1,G,PMK 137/PMK.03/2011,Income tax for sharia financing businesses
+215543,P1,G,PMK 69/PMK.03/2022,"Income tax and VAT on fintech services, including lending interest and returns"
+4940,P1,G,PP 25/2009,Income tax on sharia-based business activities (tax-neutral treatment of sharia contracts)
+185162,P2,G,UU 7/2021,Tax harmonisation law (VAT and income-tax changes affecting financial services)
+306614,P2,G,PMK 81/2024,Core-tax consolidated provisions (may supersede earlier PMKs)
+154566,P2,H,Perpres 114/2020,National financial inclusion strategy
+342969,P2,H,Permenko Perekonomian 1/2026,Current KUR guideline (channel for financing companies and sharia lenders)
+198380,P3,H,Permenko Perekonomian 1/2022,Previous KUR guideline (lineage)
+323494,P3,H,Permenko Perekonomian 7/2025,Third amendment to the 2022 KUR guideline (lineage)
+347826,P3,H,Permenko Perekonomian 13/2024,KUR restructuring relaxation
+54415,P3,H,Keppres 14/2015,MSME financing policy committee
+132021,P2,I,Perpres 28/2020,National Committee for Sharia Economy and Finance (KNEKS)
+40995,P3,I,Perpres 91/2016,Predecessor committee KNKS (lineage)

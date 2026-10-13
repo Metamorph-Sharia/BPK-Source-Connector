@@ -1,0 +1,24 @@
+# bpk-connector configuration. Relative paths resolve against this file's directory.
+# Architecture: docs/plan/02-architecture.md
+
+[pipeline]
+data_dir = "../data"            # local store + corpus (git-ignored)
+# contact = "mailto:you@example.com"   # optional: added to the User-Agent so BPK can reach us
+
+[targets]
+targets_csv = "targets.csv"     # curated seeds; approving a candidate = a PR adding a row
+watch_toml = "watch.toml"       # watch rules for new records
+
+[source]
+requests_per_second = 1.0       # polite pacing (watch-feasibility.md: no throttling seen at <= 3/s)
+max_attempts = 3                # retries on 5xx / 429 / connection errors, with backoff
+max_file_mb = 200               # larger files are deferred, not downloaded (UU 4/2023 is 82 MB)
+max_mb_per_run = 2048           # download budget per run; the rest waits for the next run
+
+[extraction]
+ocr = true                      # OCR pages without a text layer (18 target files; one fully scanned)
+ocr_languages = "ind+eng"       # Tesseract language data that must be installed (see README: system requirements)
+
+[monitoring]
+max_hours_between_runs = 36     # `bpk-connector health` turns critical after this without a successful run
+# Alerts go to data/alerts.jsonl and data/reports/latest.{json,md}; other channels come with the orchestrator.

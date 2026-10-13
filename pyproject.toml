@@ -1,0 +1,36 @@
+[project]
+name = "bpk-connector"
+version = "0.1.0"
+description = "Targeted ingestion of Indonesian regulations from the BPK legal database (peraturan.bpk.go.id)."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "httpx>=0.27",
+    "beautifulsoup4>=4.12",
+    "pymupdf>=1.24",
+    "ocrmypdf>=16",
+]
+
+[project.scripts]
+bpk-connector = "bpk_connector.cli:main"
+
+[dependency-groups]
+dev = ["pytest>=8"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/bpk_connector"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["tests"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "SIM"]

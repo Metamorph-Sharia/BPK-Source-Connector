@@ -1,0 +1,22 @@
+# Local document store and corpus (see docs/plan/02-architecture.md#storage)
+/data/
+
+# Credentials must never be committed (BPK needs none; kept for parity with the OJK connector)
+/credentials/
+*.token.json
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+*.egg-info/
+dist/
+build/
+
+# OS / editors
+.DS_Store
+.vscode/
+.idea/
+
+.claude/

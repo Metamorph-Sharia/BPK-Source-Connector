@@ -1,0 +1,36 @@
+# Watch rules: which NEW BPK records become review candidates (docs/research/pilot-target-list.md).
+# A candidate is never collected until a person approves it (a PR adding it to targets.csv).
+# Changes to this file are reviewed like code: they decide what the connector looks at.
+
+# Central-government forms we watch, as BPK writes "Bentuk Singkat". Anything else (regional
+# regulations, OJK and BI rules, which their own connectors collect) is ignored.
+forms = [
+  "UU", "Perpu", "PP", "Perpres", "Keppres",
+  "PMK",                                   # Minister of Finance: tax, fintech tax
+  "Permenkumham", "Permenkum",             # Ministry of Law: PT formation, fiduciary, beneficial owners
+  "Permenkominfo", "Permenkomdigi",        # electronic systems, personal data
+  "Peraturan BKPM", "Permeninves/BKPM",    # investment and risk-based licensing
+  "Permenko Perekonomian",                 # KUR and credit programmes
+  "Peraturan PPATK", "Perka PPATK",        # AML/CFT reporting
+  "Perma",                                 # Supreme Court: sharia economic disputes, small claims
+]
+
+# A watched record whose title contains one of these (case-insensitive) becomes a candidate.
+title_keywords = [
+  "fidusia", "perseroan terbatas", "pemilik manfaat", "pengguna jasa", "pencucian uang",
+  "pendanaan terorisme", "sistem elektronik", "data pribadi", "perizinan berusaha",
+  "penanaman modal", "kredit usaha rakyat", "teknologi finansial", "syariah", "pembiayaan",
+  "sektor keuangan", "jasa keuangan", "perlindungan konsumen", "penjaminan",
+]
+
+# ... or whose BPK subject ("Subjek") is one of these (case-insensitive).
+subjects = [
+  "PERBANKAN, LEMBAGA KEUANGAN",
+  "FIDUSIA DAN LEMBAGA PEMBIAYAAN",
+  "PENCUCIAN UANG",
+  "PERLINDUNGAN KONSUMEN",
+]
+
+# A page with more version links than this in one direction is treated as an omnibus law:
+# its links go to review instead of joining the targets (UU 4/2023 amends ~25 laws).
+max_auto_links = 5
