@@ -216,11 +216,12 @@ class SqliteStore:
 
     def file_state(self, record_id: str, path: str) -> StoredFile | None:
         row = self.db.execute("SELECT * FROM files WHERE record_id = ? AND path = ?", (record_id, path)).fetchone()
-        return (
-            StoredFile(row["sha256"], row["etag"], row["size"], row["media_type"], row["url"], row["last_modified"])
-            if row
-            else None
-        )
+        if row is None:
+            return None
+        return StoredFile(
+            row["sha256"], row["etag"], row["size"], row["media_type"], row["url"], row["last_modified"],
+            fetched_at=_datetime_or_none(row["fetched_at"]),
+        )  # fmt: skip
 
     def save_file(self, record_id: str, file: FileRef, stored: StoredFile, *, at: datetime) -> None:
         with self.db:
@@ -376,3 +377,11 @@ def _regulation_from_json(text: str) -> Regulation:
     data["relations"] = tuple(Relation(**r) for r in data["relations"])
     data["files"] = tuple(FileRef(**f) for f in data["files"])
     return Regulation(**data)
+
+
+def _datetime_or_none(text: str | None) -> datetime | None:
+    """Rows written before fetch times were ISO timestamps carry something else; treat it as unknown."""
+    try:
+        return datetime.fromisoformat(text) if text else None
+    except ValueError:
+        return None

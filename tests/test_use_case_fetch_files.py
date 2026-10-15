@@ -80,3 +80,24 @@ def test_a_file_over_the_size_cap_is_deferred_not_failed() -> None:
     summary = world.run()
 
     assert summary.deferred == [LAW.path] and summary.failed == []
+
+
+def test_identical_bytes_served_again_keep_the_time_we_first_held_them() -> None:
+    """Judicial-review files have no ETag, so BPK sends them in full every run; nothing changed."""
+    from dataclasses import replace
+    from datetime import timedelta
+
+    from fakes.memory import NOW
+
+    world = World({RULING.path: b"%PDF ruling"}, RULING)
+    world.run()
+    held = world.repository.file_state("240203", RULING.path)
+    world.repository.stored_files[("240203", RULING.path)] = replace(held, etag=None)  # no validator to send
+    world.use_case.clock = type("Later", (), {"now": staticmethod(lambda: NOW + timedelta(days=1))})()
+
+    summary = world.run()
+
+    again = world.repository.file_state("240203", RULING.path)
+    assert summary.unchanged == 1 and summary.stored == 0
+    assert again.fetched_at == NOW
+    assert again.etag is not None  # the validators are still refreshed

@@ -4,9 +4,11 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from pathlib import Path
 
 import httpx
 
+from bpk_connector import __version__
 from bpk_connector.adapters.bpk.detail_parser import parse_detail
 from bpk_connector.adapters.bpk.gateway import BASE_URL, HttpBpkGateway
 from bpk_connector.adapters.catalog.files import FileCatalog
@@ -17,8 +19,10 @@ from bpk_connector.adapters.monitoring.reports import ReportFiles
 from bpk_connector.adapters.storage.blobs import FileBlobStore
 from bpk_connector.adapters.storage.corpus import CorpusWriter
 from bpk_connector.adapters.storage.sqlite import SqliteStore
+from bpk_connector.adapters.storage.v2_bundle import V2BundleWriter
 from bpk_connector.application.ports import TextExtractor
 from bpk_connector.application.use_cases.check_targets import CheckTargets
+from bpk_connector.application.use_cases.export_bundle import ExportBundle
 from bpk_connector.application.use_cases.export_corpus import ExportCorpus
 from bpk_connector.application.use_cases.extract_texts import ExtractTexts
 from bpk_connector.application.use_cases.fetch_files import FetchFiles
@@ -42,6 +46,7 @@ class SystemClock:
 class App:
     config: Config
     store: SqliteStore
+    blobs: FileBlobStore
     catalog: FileCatalog
     gateway: HttpBpkGateway
     check: CheckTargets
@@ -57,6 +62,11 @@ class App:
     def close(self) -> None:
         self.gateway.close()
         self.store.close()
+
+    def export_bundle(self, out_dir: Path, run_id: str) -> ExportBundle:
+        """The platform hand-off: a contract v2 bundle in `out_dir` (empty or new)."""
+        writer = V2BundleWriter(out_dir, self.blobs, run_id=run_id, connector_version=__version__)
+        return ExportBundle(self.store, self.catalog, writer)
 
 
 def build_gateway(config: Config) -> HttpBpkGateway:
@@ -108,6 +118,7 @@ def build(config: Config) -> App:
     return App(
         config=config,
         store=store,
+        blobs=blobs,
         catalog=catalog,
         gateway=gateway,
         check=check,

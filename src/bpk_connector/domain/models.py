@@ -1,8 +1,8 @@
 """Records the rest of the connector shares: a BPK regulation, its links and files, and our targets.
 
-Pure data and rules; nothing here knows about HTTP, HTML or storage. There is no canonical
-ID (decision D4): a regulation is keyed by BPK's own record ID, and BPK's fields travel
-unchanged in ``fields`` beside the few typed values we need ourselves.
+Pure data and rules; nothing here knows about HTTP, HTML or storage. Inside this connector a
+regulation is keyed by BPK's own record ID (decision D4); the canonical ID it has across sources
+is identity.py's. BPK's fields travel unchanged in ``fields`` beside the few typed values we need.
 """
 
 from __future__ import annotations

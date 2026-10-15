@@ -27,6 +27,7 @@ from bpk_connector.application.ports import (
 from bpk_connector.application.walk import walk_targets
 from bpk_connector.config import DEFAULT_CONFIG_PATH, load_config
 from bpk_connector.domain.changes import fingerprint
+from bpk_connector.domain.identity import source_id
 from bpk_connector.domain.models import FileRef, Target
 from bpk_connector.source_connector import (
     Discovered,
@@ -123,7 +124,7 @@ class BPKConnector(SourceConnector):
 def _discovered(target: Target, page: DetailPage) -> Discovered:
     regulation = page.regulation
     return Discovered(
-        source_id=f"bpk:{regulation.record_id}",
+        source_id=source_id(regulation.record_id),
         source_url=DETAILS_URL.format(regulation.record_id),
         version=fingerprint(regulation),
         metadata=_metadata(regulation.record_id, page)

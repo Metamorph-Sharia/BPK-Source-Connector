@@ -9,6 +9,7 @@ import sys
 from collections.abc import Callable, Sequence
 from dataclasses import asdict
 from datetime import UTC, date, datetime
+from pathlib import Path
 from typing import Any
 
 from bpk_connector.adapters.catalog.files import CatalogError
@@ -44,7 +45,13 @@ def _parser() -> argparse.ArgumentParser:
     fetch.add_argument("--max-mb", type=int)
     extract = sub.add_parser("extract", help="extract text from stored files not yet extracted (no network)")
     extract.add_argument("--retry-unsupported", action="store_true", help="try again files once found unreadable")
-    sub.add_parser("export", help="rebuild data/corpus/ from what we hold (no network)")
+    export = sub.add_parser("export", help="rebuild data/corpus/ from what we hold (no network)")
+    export.add_argument(
+        "--format", choices=["corpus", "v2"], default="corpus",
+        help="corpus: data/corpus/ (default); v2: a contract v2 bundle for the platform loader",
+    )  # fmt: skip
+    export.add_argument("--out", type=Path, help="v2 only: an empty or new directory for the bundle")
+    export.add_argument("--run-id", help="v2 only: identifies this export to the loader (default: UTC timestamp)")
     sub.add_parser("reparse", help="re-apply the parser to every stored page (no network), then export")
     sub.add_parser("status", help="counts: targets, records, files, candidates, last run")
     sub.add_parser("health", help="is ingestion healthy? exit 0 ok / 1 warning / 2 critical")
@@ -70,6 +77,18 @@ def _run_id() -> str:
 
 def _budget(app: App, max_mb: int | None) -> int:
     return max_mb * MB if max_mb is not None else app.config.max_bytes_per_run
+
+
+def _export(app: App, args: argparse.Namespace) -> int:
+    if args.format == "corpus":
+        _print(asdict(app.export.run()))
+        return EXIT_OK
+    if args.out is None:
+        print("bpk-connector: export --format v2 needs --out DIR", file=sys.stderr)
+        return EXIT_USAGE
+    run_id = args.run_id or _run_id()
+    _print({"bundle": str(args.out), "run_id": run_id} | asdict(app.export_bundle(args.out, run_id).run()))
+    return EXIT_OK
 
 
 NEEDS_ENVIRONMENT = {"run", "extract"}
@@ -160,7 +179,7 @@ COMMANDS: dict[str, Callable[[App, argparse.Namespace], int]] = {
     "extract": _printing(
         lambda app, args: asdict(app.extract.run(f"extract-{_run_id()}", retry_unsupported=args.retry_unsupported))
     ),
-    "export": _printing(lambda app, args: asdict(app.export.run())),
+    "export": _export,
     "reparse": _printing(
         lambda app, args: asdict(app.reparse.run(f"reparse-{_run_id()}")) | {"export": asdict(app.export.run())}
     ),

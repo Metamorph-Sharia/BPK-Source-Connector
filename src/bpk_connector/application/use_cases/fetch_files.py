@@ -65,8 +65,12 @@ class FetchFiles:
             download.url,
             download.last_modified,
         )
-        self.repository.save_file(record_id, file, stored, at=self.clock.now())  # also refreshes the validators
-        if held and held.sha256 == stored.sha256:
+        same_bytes = held is not None and held.sha256 == stored.sha256
+        # Refreshes the validators. Identical bytes keep the time we first held them: BPK sends files without an
+        # ETag (judicial-review rulings) in full every run, and that is no change.
+        first_held = held.fetched_at if same_bytes and held.fetched_at else self.clock.now()
+        self.repository.save_file(record_id, file, stored, at=first_held)
+        if same_bytes:
             summary.unchanged += 1
             return None
         summary.stored += 1

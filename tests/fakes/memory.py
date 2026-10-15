@@ -3,10 +3,11 @@
 from __future__ import annotations
 
 import hashlib
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import UTC, date, datetime
 
 from bpk_connector.application.dto import (
+    BundleDocument,
     Candidate,
     DetailPage,
     Download,
@@ -124,7 +125,7 @@ class MemoryRepository:
         return self.stored_files.get((record_id, path))
 
     def save_file(self, record_id: str, file: FileRef, stored: StoredFile, *, at: datetime) -> None:
-        self.stored_files[(record_id, file.path)] = stored
+        self.stored_files[(record_id, file.path)] = replace(stored, fetched_at=at)  # as SqliteStore records it
 
     # RunHistory (the event log part lives in MemoryEventLog; tests wire them together)
     def open_candidates(self) -> dict[str, date]:
@@ -232,3 +233,14 @@ class MemorySitemapState:
 
     def mark_full_sweep(self, *, at: datetime) -> None:
         self.full_sweep = at.date()
+
+
+@dataclass
+class MemoryBundleWriter:
+    written: list[BundleDocument] | None = None
+
+    def write(self, documents: list[BundleDocument]) -> None:
+        self.written = list(documents)
+
+    def by_record(self) -> dict[str, BundleDocument]:
+        return {document.regulation.record_id: document for document in self.written or []}

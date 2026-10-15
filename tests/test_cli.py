@@ -60,3 +60,19 @@ def test_run_refuses_to_start_on_a_machine_missing_its_ocr_tools(config: Path, c
     code, _ = run(capsys, "--config", str(config), "run")  # returns before any network call
 
     assert code == EXIT_PROBLEMS
+
+
+def test_export_v2_writes_a_complete_bundle_even_when_nothing_is_held(config: Path, tmp_path: Path, capsys) -> None:
+    out = tmp_path / "bundle"
+
+    code, printed = run(
+        capsys, "--config", str(config), "export", "--format", "v2", "--out", str(out), "--run-id", "r1"
+    )
+
+    assert code == EXIT_OK
+    assert json.loads(printed)["documents"] == 0
+    assert json.loads((out / "manifest.json").read_text())["run_id"] == "r1"
+
+
+def test_export_v2_needs_an_output_directory(config: Path, capsys) -> None:
+    assert run(capsys, "--config", str(config), "export", "--format", "v2")[0] == EXIT_USAGE

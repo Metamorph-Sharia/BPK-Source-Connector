@@ -1,0 +1,11 @@
+# Only what BPK-Source-Connector/Dockerfile copies: the build context is the whole workspace, data included.
+*
+!Metamorph-Knowledge-Platform/packages/metamorph-contract
+!BPK-Source-Connector/pyproject.toml
+!BPK-Source-Connector/uv.lock
+!BPK-Source-Connector/README.md
+!BPK-Source-Connector/src
+!BPK-Source-Connector/config
+**/__pycache__
+**/.venv
+**/.pytest_cache

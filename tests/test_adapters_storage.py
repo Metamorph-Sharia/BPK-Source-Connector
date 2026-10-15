@@ -49,6 +49,7 @@ def test_file_state_is_kept_per_record_and_path(tmp_path: Path) -> None:
     store.save_file("240203", file, StoredFile("sha", '"v2"', 10, "application/pdf", stored.url), at=NOW)
 
     assert store.file_state("240203", file.path).etag == '"v2"'
+    assert store.file_state("240203", file.path).fetched_at == NOW
     assert store.file_state("240203", "/other") is None
 
 

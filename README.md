@@ -82,16 +82,33 @@ So the orchestrator gets the same artifacts as the standalone pipeline.
 
 **Deployment (later phase):** the orchestrator (probably Airflow) runs `BPKConnector` on a server. Install the [system requirements](#system-requirements) on every worker that runs it; construction fails fast if they're missing. Until then, `bpk-connector run` collects and backfills locally.
 
+## For the platform (contract v2)
+
+```bash
+uv run bpk-connector export --format v2 --out data/exports/v2/RUN   # no network; prints counts as JSON
+```
+
+Writes every target we hold as one [contract v2 bundle](../Metamorph-Knowledge-Platform/packages/metamorph-contract/CONTRACT_V2.md), a full snapshot that `metamorph load` reads into the platform's PostgreSQL.
+
+- **Keys:** `source_id` is `bpk:{record_id}`, the same as `BPKConnector`.
+- **IDs:** `id:{family}:{year}:{n}`, e.g. `id:uu:2023:4` or `id:pmk:2012:130` ([domain/identity.py](src/bpk_connector/domain/identity.py)). OJK's "Mengingat" citations name the same IDs, so they link up in the platform.
+- **Citations:** what a regulation does to others, from BPK's "Status Peraturan" (`Mengubah` → amends, `Mencabut` → revokes, `Mencabut sebagian` → partly_revokes). The other side's labels (`Diubah dengan` …) set the regulation's own status: amended, partly revoked, revoked ([domain/standing.py](src/bpk_connector/domain/standing.py)).
+- **Files and texts:** the official file (`main`), judicial-review rulings (`other`), and the text extracted from each. BPK's abstract stays out, as in the corpus.
+
+**As a container:** the platform's Airflow runs this connector from [Dockerfile](Dockerfile), built from the workspace root, the directory holding every repository: `docker build -f BPK-Source-Connector/Dockerfile -t metamorph/bpk-connector:dev .` (or `docker compose --profile connectors build` in Metamorph-Knowledge-Platform). `data/` is bind-mounted, not copied, so scheduled runs and your own CLI runs share one store. Don't run both at once. The image includes Tesseract (`ind`, `eng`) and Ghostscript for OCR.
+
 ## How it fits together
 
 Clean Architecture: dependencies point inward only, and `tests/test_architecture.py` enforces it.
 
 ```
 cli.py · connector.py (BPKConnector) · wiring.py          entry points; wiring is the only place that knows concrete classes
-  └─ adapters/   bpk/ (httpx, sitemap XML, detail HTML) · storage/ (SQLite, blobs, corpus) · catalog/ (targets.csv, watch.toml)
+  └─ adapters/   bpk/ (httpx, sitemap XML, detail HTML) · storage/ (SQLite, blobs, corpus, v2 bundle) · catalog/ (targets.csv, watch.toml)
        └─ application/   use_cases/ (sync_sitemaps, triage_new_records, check_targets, fetch_files, extract_texts,
-                         export_corpus, report_run, review_candidates, reparse, run_pipeline) · walk · ports · dto
+                         export_corpus, export_bundle, report_run, review_candidates, reparse, run_pipeline)
+                         · walk · ports · dto
             └─ domain/   models · targeting · changes (diff, fingerprint, one-sided links) · freshness · alerts · health
+                         · identity (canonical IDs) · standing (status, outgoing relations)
 ```
 
 ### The corpus (`data/corpus/`)

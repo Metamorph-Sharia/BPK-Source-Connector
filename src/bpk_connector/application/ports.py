@@ -10,6 +10,7 @@ from datetime import date, datetime
 from typing import Protocol
 
 from bpk_connector.application.dto import (
+    BundleDocument,
     Candidate,
     CorpusDocument,
     DetailPage,
@@ -126,6 +127,12 @@ class CorpusWriter(Protocol):
     """Writes the knowledge-database hand-off (``data/corpus/``), replacing what was there."""
 
     def write(self, documents: list[CorpusDocument]) -> None: ...
+
+
+class BundleWriter(Protocol):
+    """Writes the platform hand-off: one contract v2 bundle, a full snapshot of what we hold."""
+
+    def write(self, documents: list[BundleDocument]) -> None: ...
 
 
 class RunHistory(Protocol):

@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, datetime
 from enum import StrEnum
 
-from bpk_connector.domain.models import Regulation
+from bpk_connector.domain.models import FileRef, Regulation
 
 
 @dataclass(frozen=True)
@@ -60,6 +60,7 @@ class StoredFile:
     media_type: str
     url: str
     last_modified: str | None = None  # BPK's judicial-review files have no ETag, only this
+    fetched_at: datetime | None = None  # when we first held these bytes; None until saved
 
 
 @dataclass(frozen=True)
@@ -126,3 +127,36 @@ class StoredText:
 
 # Provenance of every text we extract: from an official file, in Indonesian, free to use.
 SELF_EXTRACTED_TEXT = {"origin": "self_extracted", "rights": "public", "language": "id"}
+
+
+@dataclass(frozen=True)
+class BundleFile:
+    """A file we hold for a regulation, and the text we extracted from it (None when there is none)."""
+
+    ref: FileRef
+    stored: StoredFile
+    text: StoredText | None
+
+
+@dataclass(frozen=True)
+class BundleCitation:
+    """Something this regulation does to another, per BPK: e.g. it amends "UU No. 9 Tahun 2016"."""
+
+    relation: str  # contract v2's name: amends | revokes | partly_revokes | refers_to
+    kind: str  # BPK's label, unchanged
+    citation: str  # the other regulation, as BPK writes it
+    about: str
+    target_id: str | None  # its canonical ID, when we can tell
+
+
+@dataclass(frozen=True)
+class BundleDocument:
+    """One regulation for the platform's contract v2 bundle."""
+
+    regulation: Regulation
+    canonical_id: str | None  # None when the record has no usable number or year
+    id_conflict: bool  # another record we hold claims the same canonical ID
+    standing: str  # contract v2's status name
+    files: tuple[BundleFile, ...]
+    citations: tuple[BundleCitation, ...]
+    fetched_at: datetime  # when we first held the newest of its files
