@@ -115,6 +115,32 @@ Remaining:
 - [x] Large files: UU 4/2023 (82 MB) and UU 6/2023 (85 MB) extract page by page.
 - [x] `BPKConnector.fetch` delivers the extracted text too, so the orchestrator gets the same artifacts as the standalone pipeline.
 
+## M6.1 — Reliable texts for the platform *(done 2026-10-16)*
+
+From the registry failure RCA (`Metamorph-EDA/2026-10-16-registry-failure-rca`). BPK's share of the platform's review queue had two connector causes: annex volumes delivered as the regulation (29 texts), and publisher OCR in PDF text layers (8 primary, 22 touched).
+
+- [x] **File roles** (`domain/file_roles.py`). BPK files annex volumes under "Peraturan" too, so every one was `role=main` and parsed as the regulation. Annexes are told apart by name ("Lampiran": 32 of 32), because page 1 can't tell them apart (KBLI volumes open mid-table). A regulation always keeps a main file. The bundle, the corpus (`text.id.md`, `files[].role`) and `BPKConnector` all use the same rule.
+- [x] **Quality gate and re-OCR** (`domain/text_quality.py`, `OcrTextExtractor`):
+  - Each text is scored by its clean and OCR-damaged `Pasal` headings. Any damaged heading means the text layer is the publisher's bad OCR: every BPK file with one was in the review queue, and no file without one was.
+  - A damaged text layer is OCR'd whole, and the cleaner reading is kept. One reading is cleaner only on both counts: more clean headings and fewer damaged.
+  - Texts stored before the gate are re-extracted once.
+  - The `text_damaged` alert reports what is still damaged.
+- [x] **Tesseract single-column layout** (`--psm 4`). The default layout analysis read hanging-indent markers "(1)" as a separate column, so ayat went missing. The cost is the same (0.4–0.6 s/page).
+- [x] **Live result** (production `extract` over all 193 files, 59 minutes once; then the platform's parser on every text it would parse as `main`):
+
+  | | Before | After |
+  |---|---:|---:|
+  | Texts parsed as a regulation | 163 | 131 (32 annexes no longer) |
+  | Texts with structure problems | 78 | 40 |
+  | Problem lines | 13,229 | 3,719 |
+  | Texts with damaged headings | 30 | 6 |
+
+  - KUHP (UU 1/2023) drops from 7,305 problem lines to 1, PMK 81/2024 from 1,447 to 7, UU 4/2023 from 920 to 69, PP 28/2025 from 272 to 8. 13 texts are fully clean.
+  - Two omnibus laws, Perpu 2/2022 and UU 6/2023, show more problems. Their text is cleaner (damaged headings 170 → 0 and 106 → 0), but now that the amended laws' quoted articles read correctly, the parser takes them as the law's own. That is the platform's unmodelled omnibus shape and missing jump guard (RCA §6 step 2 and step 4).
+  - 7 single-column OCR pages now come back as near-empty: rotated tables and stamps whose earlier OCR was nonsense ("uesuap").
+
+**Still open:** rotated scanned pages (ocrmypdf `rotate_pages` needs Tesseract's `osd` data); line-layout merges in BPK text layers (RCA §6c); the 26 unexplained texts (RCA §6b).
+
 ## M7 — Scheduled operation and hand-off to the orchestrator
 
 The connector is developed and backfilled locally now. In the deployment phase it runs on a server under the team's orchestrator (probably Airflow), which fetches updates and new documents unattended.

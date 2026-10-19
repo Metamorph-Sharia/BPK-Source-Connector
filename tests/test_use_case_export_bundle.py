@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
 from datetime import UTC, datetime
 
 from fakes.memory import MemoryBundleWriter, MemoryCatalog, MemoryRepository
 
 from bpk_connector.application.dto import Method, StoredFile, StoredText
 from bpk_connector.application.use_cases.export_bundle import ExportBundle
+from bpk_connector.domain.file_roles import FileRole
 from bpk_connector.domain.models import FileRef, Regulation, Relation, Target, TargetOrigin, Tier
 
 EARLIER, LATER = datetime(2026, 10, 1, tzinfo=UTC), datetime(2026, 10, 12, tzinfo=UTC)
@@ -58,6 +60,17 @@ def test_a_held_target_is_identified_with_its_standing_files_and_texts() -> None
     assert [f.text is not None for f in document.files] == [True, False]
     assert document.fetched_at == LATER
     assert (summary.documents, summary.texts) == (1, 1)
+
+
+def test_each_file_carries_its_role_so_annex_volumes_are_not_read_as_the_regulation() -> None:
+    annex = FileRef("394931", "2.2 Lampiran I.B PP Nomor 28 Tahun 2025 (I.B.1-810).pdf", "/Download/394931/I.B.pdf")
+    repository = MemoryRepository()
+    hold(repository, replace(P2SK, files=(LAW, annex, RULING)), (LAW, EARLIER, True), (annex, EARLIER, True),
+         (RULING, LATER, False))  # fmt: skip
+
+    writer, _ = export(repository, seed("240203"))
+
+    assert [f.role for f in writer.by_record()["240203"].files] == [FileRole.MAIN, FileRole.ANNEX, FileRole.OTHER]
 
 
 def test_citations_point_at_held_records_or_at_the_id_bpk_s_citation_names() -> None:

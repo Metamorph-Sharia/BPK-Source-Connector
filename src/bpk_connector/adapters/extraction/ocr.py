@@ -1,7 +1,10 @@
-"""``TextExtractor`` with OCR for pages that have no text layer (ocrmypdf + Tesseract).
+"""``TextExtractor`` with OCR (ocrmypdf + Tesseract), for pages a text layer can't be trusted on.
 
-Only those pages are OCR'd: they are cut into a small PDF, recognised, and merged back by page
+Pages without a text layer are OCR'd alone: cut into a small PDF, recognised, and merged back by page
 number. Most target PDFs are fully text (UU 4/2023 is 82 MB); OCRing whole files would waste hours.
+A text layer can itself be the publisher's OCR, and some of BPK's are bad: their article headings
+are damaged (domain/text_quality.py). Then every page is recognised again, and the cleaner reading
+is kept. Our own OCR left no damaged heading in any BPK file it read (2026-10-16).
 System requirements: Tesseract with Indonesian data, and Ghostscript (see README).
 """
 
@@ -17,6 +20,7 @@ import pymupdf
 
 from bpk_connector.adapters.extraction.pdf import PdfTextExtractor, compose, has_text
 from bpk_connector.application.dto import ExtractedText, Method
+from bpk_connector.domain.text_quality import assess
 
 log = logging.getLogger(__name__)
 for noisy in ("ocrmypdf", "fontTools"):  # they log every page and font at INFO: floods orchestrator task logs
@@ -24,6 +28,9 @@ for noisy in ("ocrmypdf", "fontTools"):  # they log every page and font at INFO:
 
 DEFAULT_LANGUAGES = "ind+eng"  # Indonesian text, with English terms and citations
 OCR_DPI = 300  # Tesseract's sweet spot for printed text
+# Tesseract's "single column" layout. Its default analysis reads a hanging indent's markers ("(1)") as a
+# column of their own, so they land away from their paragraphs and the parser loses ayat.
+PAGE_SEGMENTATION = 4
 
 
 class OcrTextExtractor:
@@ -34,16 +41,20 @@ class OcrTextExtractor:
     def extract(self, data: bytes) -> ExtractedText:
         pages = self.text_layer.page_texts(data)
         missing = [n for n, page in enumerate(pages) if not has_text(page)]
-        if not missing:
+        layer = assess(_joined(pages))
+        to_read = list(range(len(pages))) if layer.is_damaged else missing
+        if not to_read:
             return compose(pages, Method.TEXT_LAYER)
         try:
-            recognised = self._ocr(data, missing)
+            recognised = dict(zip(to_read, self._ocr(data, to_read), strict=True))
         except ocrmypdf.exceptions.ExitCodeException as e:
             log.warning("OCR failed (%s); keeping the text layer only", e)
             return compose(pages, Method.TEXT_LAYER)
-        for n, text in zip(missing, recognised, strict=True):
-            pages[n] = text
-        return compose(pages, Method.OCR)
+        read = [recognised.get(n, page) for n, page in enumerate(pages)]
+        if layer.is_damaged and not assess(_joined(read)).reads_better_than(layer):
+            log.info("OCR read no better than the damaged text layer (%s); keeping the text layer", layer)
+            read = [recognised[n] if n in missing else page for n, page in enumerate(pages)]
+        return compose(read, Method.OCR if read != pages else Method.TEXT_LAYER)
 
     def _ocr(self, data: bytes, page_numbers: list[int]) -> list[str]:
         output = io.BytesIO()
@@ -55,8 +66,13 @@ class OcrTextExtractor:
             optimize=0,
             progress_bar=False,
             use_threads=True,  # no worker processes: safe under the orchestrator and in tests
+            tesseract_pagesegmode=PAGE_SEGMENTATION,
         )
         return self.text_layer.page_texts(output.getvalue())
+
+
+def _joined(pages: list[str]) -> str:
+    return "\n".join(pages)
 
 
 def _page_images(data: bytes, page_numbers: list[int]) -> bytes:

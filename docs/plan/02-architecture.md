@@ -53,6 +53,8 @@ Status: **planned.** Tech choices match the OJK connector unless stated. Where t
 | `changes.py` | Diffs two observations of a record into `ChangeEvent`s: status, relations, files, metadata, `lastmod` | Pairs of saved detail pages |
 | `freshness.py` | Lag per target (promulgated → first seen), per-issuer summaries, date sanity checks (e.g. a date in the future) | Measured cases from the research |
 | `alerts.py` | Alert rules: run facts in, alerts with severity out (same shape as OJK's `monitoring/alerts.py`) | Synthetic run facts |
+| `file_roles.py` | What each file is to its regulation: `main`, `annex` (BPK files annex volumes under "Peraturan" too, and names them "Lampiran") or `other` (judicial-review rulings). A regulation always keeps a main file | Every file name BPK uses for one |
+| `text_quality.py` | How well a text's `Pasal` headings survived OCR: clean and damaged headings (`Pasa122`, `Pasal 1O`). Any damaged heading marks the text damaged; one reading is better than another only on both counts | Damaged headings from BPK text layers |
 
 Domain objects carry no HTML labels, URLs or SQL. The gateway translates BPK's labels ("Bentuk Singkat", "T.E.U.") into typed fields, and keeps the raw labels in `fields` for pass-through.
 
@@ -96,7 +98,7 @@ One module each in `application/use_cases/`. Each takes its ports in its constru
 | `TriageNewRecords` | For each new ID: fetch the detail page, store the raw HTML, build the `Regulation`, ask `targeting` for a decision. `auto_add` → becomes a target (lineage). `candidate` → review queue. `ignore` → a minimal row so it's never fetched again | gateway, blobs, repository, catalog, events |
 | `CheckTargets` | Re-fetch every target's detail page (BPK's `lastmod` misses relation changes); diff with `changes`; apply the expansion rule to new relations; record events | gateway, blobs, repository, catalog, events |
 | `FetchFiles` | For targets with new or changed file refs: conditional download (`ETag`), store bytes, record the file. Respects a per-run size budget | gateway, blobs, repository, events |
-| `ExtractTexts` | PDF → Indonesian text, with text layer first and OCR fallback; quality score | blobs, repository, extractor |
+| `ExtractTexts` | PDF → Indonesian text, with text layer first and OCR where it can't be trusted; heading quality stored and damage reported | blobs, repository, extractor |
 | `ExportCorpus` | Rebuild `data/corpus/` from the store, exportable rights only | repository, blobs, corpus writer |
 | `ReportRun` | Evaluate alert rules, the freshness report, notify, write the run report | repository, events, notifier, clock |
 | `ReviewCandidates` | List, approve or reject candidates; approval adds a target to the catalog | catalog, repository, events |
@@ -115,7 +117,8 @@ One module each in `application/use_cases/`. Each takes its ports in its constru
 | `adapters/storage/blobs.py` | `BlobStore` | `data/raw/{sha[:2]}/{sha}` |
 | `adapters/storage/corpus.py` | Corpus writer used by `ExportCorpus` | Layout below |
 | `adapters/catalog/files.py` | `TargetCatalog` | `config/targets.csv` (curated, versioned in git) + `config/watch.toml` (watch rules) + review queue in SQLite |
-| `adapters/extraction/pdf.py` | `TextExtractor` | `pymupdf` text layer; `ocrmypdf` + Tesseract `ind` fallback (same as OJK M3) |
+| `adapters/extraction/pdf.py` | `TextExtractor` | `pymupdf` text layer |
+| `adapters/extraction/ocr.py` | `TextExtractor` | `ocrmypdf` + Tesseract `ind+eng`, single-column layout (`--psm 4`). OCRs pages without a text layer; when the text layer has damaged headings (the publisher's own OCR), every page, keeping the cleaner reading |
 | `adapters/monitoring/notifiers.py` | `Notifier` | File channel always on; Slack, webhook and email deferred to the orchestration phase, as in OJK |
 
 ## Entry points and wiring
@@ -184,7 +187,8 @@ candidates       record_id, matched_rules_json, state (open | approved | rejecte
 relations        from_record, kind (raw label), to_record, label, first_seen_at, last_seen_at
 files            record_id, file_id, name, etag, last_modified, size, sha256, fetched_at, state
 texts            sha256 (of the PDF), origin (self_extracted), method (text_layer | ocr), rights,
-                 blob_sha256, chars, quality, extracted_at
+                 blob_sha256, chars, extracted_at,
+                 clean_headings, damaged_headings (NULL: extracted before quality was assessed; re-extracted once)
 snapshots        record_id, kind (detail_html), blob_sha256, fetched_at
 sitemap_state    year, lastmod, url_count, fetched_at
 events           run_id, at, record_id, kind, detail_json
@@ -252,6 +256,7 @@ Rules are pure (`domain/alerts.py`); `ReportRun` gathers each run's facts; `heal
 | `candidates_queued` | info | Records queued for review |
 | `data_anomaly` | warning | Impossible dates (e.g. promulgated after the day we saw it) |
 | `text_incomplete` | warning | Extracted files with pages that need OCR |
+| `text_damaged` | warning | Extracted files whose `Pasal` headings are still OCR-damaged (no OCR here, or OCR read no better) |
 | `link_inconsistency` | info | A link BPK shows on one record but not, reversed, on the other |
 | `review_backlog` | warning | Candidates open for more than 14 days |
 | `no_new_records` | warning | No new BPK record for 7 days (BPK normally adds 40–60 a day) |

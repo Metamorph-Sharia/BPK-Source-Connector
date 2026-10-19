@@ -27,6 +27,7 @@ from bpk_connector.application.ports import (
 from bpk_connector.application.walk import walk_targets
 from bpk_connector.config import DEFAULT_CONFIG_PATH, load_config
 from bpk_connector.domain.changes import fingerprint
+from bpk_connector.domain.file_roles import FileRole, file_roles
 from bpk_connector.domain.identity import source_id
 from bpk_connector.domain.models import FileRef, Target
 from bpk_connector.source_connector import (
@@ -97,7 +98,8 @@ class BPKConnector(SourceConnector):
         try:
             page = self.gateway.detail(record_id)
             saved = [store.put(page.html, media_type=HTML, source_url=item.source_url)]
-            files = [self._fetch_file(ref, store, saved) for ref in page.regulation.files]
+            roles = file_roles(page.regulation.files)
+            files = [self._fetch_file(ref, roles[ref.path], store, saved) for ref in page.regulation.files]
         except NotFound as e:
             raise ItemFailed(f"gone from BPK: {e}", retryable=False) from e
         except FileTooLarge as e:
@@ -106,12 +108,12 @@ class BPKConnector(SourceConnector):
             raise SourceUnavailable(str(e)) from e
         return Fetched(files=saved, metadata=_metadata(record_id, page) | {"files": files})
 
-    def _fetch_file(self, ref: FileRef, store: FileStore, saved: list[StoredFile]) -> dict[str, Any]:
+    def _fetch_file(self, ref: FileRef, role: FileRole, store: FileStore, saved: list[StoredFile]) -> dict[str, Any]:
         """Save the file and its extracted text through ``store``; describe both."""
         download = self.gateway.download(ref)
         stored = store.put(download.content, media_type=download.media_type or PDF, source_url=download.url)
         saved.append(stored)
-        entry = {**ref.summary, "path": ref.path, "sha256": stored.sha256, "url": download.url, "text": None}
+        entry = {**_file(ref, role), "sha256": stored.sha256, "url": download.url, "text": None}
         try:
             extracted = self.extractor.extract(download.content)
         except NotExtractable as e:
@@ -123,13 +125,14 @@ class BPKConnector(SourceConnector):
 
 def _discovered(target: Target, page: DetailPage) -> Discovered:
     regulation = page.regulation
+    roles = file_roles(regulation.files)
     return Discovered(
         source_id=source_id(regulation.record_id),
         source_url=DETAILS_URL.format(regulation.record_id),
         version=fingerprint(regulation),
         metadata=_metadata(regulation.record_id, page)
         | {
-            "files": [_file(f) for f in regulation.files],
+            "files": [_file(f, roles[f.path]) for f in regulation.files],
             "target": {
                 "tier": target.tier.value,
                 "domain": target.domain,
@@ -161,5 +164,5 @@ def _text_entry(sha256: str, extracted: ExtractedText) -> dict[str, Any]:
     } | SELF_EXTRACTED_TEXT
 
 
-def _file(ref: FileRef) -> dict[str, str]:
-    return {**ref.summary, "path": ref.path}
+def _file(ref: FileRef, role: FileRole) -> dict[str, str]:
+    return {**ref.summary, "role": role, "path": ref.path}

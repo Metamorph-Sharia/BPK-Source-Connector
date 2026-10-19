@@ -82,6 +82,7 @@ def test_fetch_saves_the_page_and_every_file_and_works_from_the_item_alone() -> 
     assert store.files[fetched.files[1].sha256] == b"%PDF law"
     assert fetched.files[1].source_url == "https://bpk.test/Download/295189/UU.pdf"
     assert fetched.metadata["files"][0]["sha256"] == fetched.files[1].sha256
+    assert fetched.metadata["files"][0]["role"] == item.metadata["files"][0]["role"] == "main"
 
 
 @pytest.mark.parametrize("error", [Unavailable("HTTP 503"), Blocked("HTTP 403")])

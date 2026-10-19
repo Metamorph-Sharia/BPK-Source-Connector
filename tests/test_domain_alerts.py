@@ -59,6 +59,12 @@ def test_texts_with_pages_needing_ocr_are_a_warning() -> None:
     assert codes(facts) == [("text_incomplete", Severity.WARNING)]
 
 
+def test_texts_whose_article_headings_are_still_ocr_damaged_are_a_warning() -> None:
+    facts = replace(CLEAN, events=[ChangeEvent("text_damaged", "234935", {"damaged_headings": 115})])
+
+    assert codes(facts) == [("text_damaged", Severity.WARNING)]
+
+
 def test_data_anomalies_need_a_person_to_look() -> None:
     facts = replace(CLEAN, events=[ChangeEvent("data_anomaly", "352349", {"problems": ["date in the future"]})])
 

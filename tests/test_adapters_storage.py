@@ -12,6 +12,7 @@ from bpk_connector.adapters.storage.blobs import FileBlobStore
 from bpk_connector.adapters.storage.sqlite import SqliteStore
 from bpk_connector.application.dto import Candidate, SitemapEntry, SitemapFile, StoredFile, StoredText
 from bpk_connector.domain.models import ChangeEvent, FileRef, Target, TargetOrigin, Tier
+from bpk_connector.domain.text_quality import TextQuality
 
 FIXTURE = Path(__file__).parent / "fixtures" / "bpk" / "details" / "240203.html"
 
@@ -165,3 +166,33 @@ def test_texts_are_kept_per_file_hash(tmp_path: Path) -> None:
 
     assert SqliteStore(tmp_path / "db.sqlite").text_state("pdfsha") == text
     assert store.text_state("other") is None
+
+
+def test_a_text_s_quality_is_kept_with_it(tmp_path: Path) -> None:
+    store = SqliteStore(tmp_path / "db.sqlite")
+    text = StoredText("pdfsha", "textsha", "ocr", pages=15, quality=TextQuality(clean_headings=33, damaged_headings=0))
+
+    store.save_text(text, at=NOW)
+
+    assert SqliteStore(tmp_path / "db.sqlite").text_state("pdfsha") == text
+
+
+def test_a_schema_v4_database_keeps_its_texts_with_quality_unknown(tmp_path: Path) -> None:
+    import sqlite3
+
+    path = tmp_path / "db.sqlite"
+    old = sqlite3.connect(path)
+    old.executescript(
+        "CREATE TABLE texts (file_sha256 TEXT PRIMARY KEY, text_sha256 TEXT, method TEXT NOT NULL,"
+        " pages INTEGER NOT NULL, pages_without_text INTEGER NOT NULL, chars INTEGER NOT NULL,"
+        " note TEXT NOT NULL, extracted_at TEXT NOT NULL);"
+        "INSERT INTO texts VALUES ('pdfsha', 'textsha', 'text_layer', 345, 0, 900000, '', 'at');"
+        "PRAGMA user_version = 4;"
+    )
+    old.close()
+
+    store = SqliteStore(path)
+
+    assert store.text_state("pdfsha") == StoredText("pdfsha", "textsha", "text_layer", 345, 0, 900000, "", None)
+    store.save_text(StoredText("pdfsha", "new", "ocr", 345, quality=TextQuality(1176, 0)), at=NOW)
+    assert store.text_state("pdfsha").quality == TextQuality(1176, 0)

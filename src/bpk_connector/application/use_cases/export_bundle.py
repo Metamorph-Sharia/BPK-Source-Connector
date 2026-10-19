@@ -12,6 +12,7 @@ from dataclasses import dataclass, field
 from bpk_connector.application.dto import BundleCitation, BundleDocument, BundleFile
 from bpk_connector.application.ports import BundleWriter, Repository, TargetCatalog
 from bpk_connector.application.targets import all_targets
+from bpk_connector.domain.file_roles import file_roles
 from bpk_connector.domain.identity import cited_id, national_id
 from bpk_connector.domain.models import Regulation
 from bpk_connector.domain.standing import outgoing, standing
@@ -75,13 +76,13 @@ class ExportBundle:
         )
 
     def _files(self, regulation: Regulation) -> tuple[BundleFile, ...]:
-        files = []
+        files, roles = [], file_roles(regulation.files)
         for ref in regulation.files:
             stored = self.repository.file_state(regulation.record_id, ref.path)
             if stored is None:
                 continue
             text = self.repository.text_state(stored.sha256)
-            files.append(BundleFile(ref, stored, text if text and text.text_sha256 else None))
+            files.append(BundleFile(ref, stored, text if text and text.text_sha256 else None, roles[ref.path]))
         return tuple(files)
 
 

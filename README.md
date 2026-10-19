@@ -34,6 +34,8 @@ Besides Python ≥ 3.11 and [uv](https://docs.astral.sh/uv/), OCR needs three sy
 
 `ocrmypdf` itself is a Python dependency, pinned in `uv.lock`, so `uv sync` installs the same version everywhere.
 
+**Publisher OCR.** Some BPK PDFs carry a text layer that is the publisher's own, poor OCR: its article headings are damaged (`Pasa122` for Pasal 22), and one such heading can hide every article after it from the platform's parser. When a text layer has any damaged heading, the connector OCRs every page itself and keeps the cleaner reading ([domain/text_quality.py](src/bpk_connector/domain/text_quality.py)). Texts still damaged afterwards raise the `text_damaged` alert.
+
 **Check a machine:** `uv run bpk-connector health` exits `2` and names anything missing. `run` and `extract` refuse to start without it, and so does `BPKConnector(...)` (it raises `EnvironmentNotReady`). A server can't silently leave scanned regulations without text. To run without OCR on purpose, set `[extraction] ocr = false`.
 
 ## Quick start
@@ -93,7 +95,7 @@ Writes every target we hold as one [contract v2 bundle](../Metamorph-Knowledge-P
 - **Keys:** `source_id` is `bpk:{record_id}`, the same as `BPKConnector`.
 - **IDs:** `id:{family}:{year}:{n}`, e.g. `id:uu:2023:4` or `id:pmk:2012:130` ([domain/identity.py](src/bpk_connector/domain/identity.py)). OJK's "Mengingat" citations name the same IDs, so they link up in the platform.
 - **Citations:** what a regulation does to others, from BPK's "Status Peraturan" (`Mengubah` → amends, `Mencabut` → revokes, `Mencabut sebagian` → partly_revokes). The other side's labels (`Diubah dengan` …) set the regulation's own status: amended, partly revoked, revoked ([domain/standing.py](src/bpk_connector/domain/standing.py)).
-- **Files and texts:** the official file (`main`), judicial-review rulings (`other`), and the text extracted from each. BPK's abstract stays out, as in the corpus.
+- **Files and texts:** the official file (`main`), its annex volumes (`annex`), judicial-review rulings (`other`), and the text extracted from each. BPK files annexes under the same category as the regulation; the connector tells them apart by name ("Lampiran"), so the platform parses only the regulation's structure ([domain/file_roles.py](src/bpk_connector/domain/file_roles.py)). BPK's abstract stays out, as in the corpus.
 
 **As a container:** the platform's Airflow runs this connector from [Dockerfile](Dockerfile), built from the workspace root, the directory holding every repository: `docker build -f BPK-Source-Connector/Dockerfile -t metamorph/bpk-connector:dev .` (or `docker compose --profile connectors build` in Metamorph-Knowledge-Platform). `data/` is bind-mounted, not copied, so scheduled runs and your own CLI runs share one store. Don't run both at once. The image includes Tesseract (`ind`, `eng`) and Ghostscript for OCR.
 
@@ -109,6 +111,7 @@ cli.py · connector.py (BPKConnector) · wiring.py          entry points; wiring
                          · walk · ports · dto
             └─ domain/   models · targeting · changes (diff, fingerprint, one-sided links) · freshness · alerts · health
                          · identity (canonical IDs) · standing (status, outgoing relations)
+                         · file_roles (main, annex, other) · text_quality (OCR-damaged headings)
 ```
 
 ### The corpus (`data/corpus/`)
@@ -117,7 +120,7 @@ cli.py · connector.py (BPKConnector) · wiring.py          entry points; wiring
 regulations.jsonl                         one line per target
 documents/bpk/{record_id}/
   metadata.json                           BPK fields (unchanged), status, dates, relations, files + texts, target tier
-  text.id.md                              Indonesian text of the regulation (extracted from its official PDF)
+  text.id.md                              Indonesian text of the regulation (its main file, never an annex)
   files/{category}-{file_id}.{ext}        official files, byte-for-byte (regulation, annexes, judicial-review rulings)
   texts/{category}-{file_id}.id.md        extracted text of each file, with page markers
 ```

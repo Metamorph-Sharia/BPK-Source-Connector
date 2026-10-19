@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from dataclasses import replace
 from pathlib import Path
 
 from fakes.memory import FixedClock, MemoryCatalog, MemoryRepository
@@ -109,3 +110,20 @@ def test_extracted_text_is_exported_beside_its_file_and_as_the_documents_main_te
     entry = json.loads((folder / "metadata.json").read_text())["files"][0]["text"]
     assert entry == {"path": "texts/Peraturan-295189.id.md", "method": "text_layer", "pages": 1,
                      "coverage": 1.0, "origin": "self_extracted", "rights": "public", "language": "id"}  # fmt: skip
+
+
+def test_the_main_text_is_the_regulation_s_even_when_bpk_lists_an_annex_first(tmp_path: Path) -> None:
+    annex = FileRef("165983", "Lampiran-Peraturan-PPATK-Nomor-11-Tahun-2020.pdf", "/Download/165983/Lampiran.pdf")
+    repository, blobs = MemoryRepository(), FileBlobStore(tmp_path / "raw")
+    repository.observations["240203"] = replace(P2SK, files=(annex, LAW))
+    for ref, body in ((annex, b"LAMPIRAN I"), (LAW, b"UNDANG-UNDANG NOMOR 4 TAHUN 2023")):
+        sha = blobs.put(b"%PDF " + body)
+        repository.stored_files[("240203", ref.path)] = StoredFile(sha, None, 8, "application/pdf", "u")
+        repository.texts[sha] = StoredText(sha, blobs.put(b"<!-- page 1 -->\n" + body), "text_layer", pages=1)
+
+    export(tmp_path, repository, blobs, [Target("240203", Tier.P1, TargetOrigin.SEED)])
+
+    folder = tmp_path / "corpus/documents/bpk/240203"
+    assert (folder / "text.id.md").read_text().endswith("UNDANG-UNDANG NOMOR 4 TAHUN 2023")
+    files = json.loads((folder / "metadata.json").read_text())["files"]
+    assert [(f["file_id"], f["role"]) for f in files] == [("165983", "annex"), ("295189", "main")]

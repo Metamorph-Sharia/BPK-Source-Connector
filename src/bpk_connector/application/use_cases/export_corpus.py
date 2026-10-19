@@ -12,12 +12,12 @@ from pathlib import PurePosixPath
 from bpk_connector.application.dto import SELF_EXTRACTED_TEXT, CorpusDocument
 from bpk_connector.application.ports import Clock, CorpusWriter, Repository, TargetCatalog
 from bpk_connector.application.targets import all_targets
+from bpk_connector.domain.file_roles import FileRole, file_roles
 from bpk_connector.domain.models import FileRef, Regulation, Target
 
 SOURCE = "bpk"
 DETAILS_URL = "https://peraturan.bpk.go.id/Details/{}"
 FILE_RIGHTS = "public"  # official regulatory instruments, court rulings, and text we extract from them
-MAIN_CATEGORY = "Peraturan"  # the regulation itself, as opposed to e.g. judicial-review rulings
 MAIN_TEXT = "text.id.md"
 
 
@@ -51,21 +51,23 @@ class ExportCorpus:
         return summary
 
     def _document(self, target: Target, regulation: Regulation) -> CorpusDocument:
-        files, local = [], []
+        files, local, main_texts = [], [], []
+        roles = file_roles(regulation.files)
         for ref in regulation.files:
-            entry, placed = self._file_entry(regulation.record_id, ref)
+            entry, placed = self._file_entry(regulation.record_id, ref, roles[ref.path])
             files.append(entry)
             local += placed
-        main_text = next((sha for path, sha in local if path.startswith(f"texts/{MAIN_CATEGORY}-")), None)
-        if main_text:
-            local.append((MAIN_TEXT, main_text))
+            if roles[ref.path] is FileRole.MAIN:
+                main_texts += [sha for path, sha in placed if path.startswith("texts/")]
+        if main_texts:
+            local.append((MAIN_TEXT, main_texts[0]))
         return CorpusDocument(regulation.record_id, self._metadata(target, regulation, files), tuple(local))
 
-    def _file_entry(self, record_id: str, ref: FileRef) -> tuple[dict, list[tuple[str, str]]]:
+    def _file_entry(self, record_id: str, ref: FileRef, role: FileRole) -> tuple[dict, list[tuple[str, str]]]:
         """The file's metadata, and the blobs to place beside it: the file itself and its extracted text."""
         stored = self.repository.file_state(record_id, ref.path)
-        entry = {**ref.summary, "url": None, "sha256": None, "size": None, "media_type": None, "path": None}
-        entry |= {"rights": FILE_RIGHTS, "text": None}
+        entry = {**ref.summary, "role": role, "url": None, "sha256": None, "size": None, "media_type": None}
+        entry |= {"path": None, "rights": FILE_RIGHTS, "text": None}
         if stored is None:
             return entry, []
         path = f"files/{ref.category}-{ref.file_id}{_extension(ref.name)}"

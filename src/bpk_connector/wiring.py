@@ -102,7 +102,7 @@ def build(config: Config) -> App:
     check = CheckTargets(gateway, store, store, blobs, catalog, clock)
     fetch = FetchFiles(gateway, store, store, blobs, clock)
     export = ExportCorpus(store, catalog, CorpusWriter(config.data_dir / "corpus", blobs), clock)
-    extract = ExtractTexts(store, blobs, build_extractor(config), store, catalog, clock, upgrade_incomplete=config.ocr)
+    extract = ExtractTexts(store, blobs, build_extractor(config), store, catalog, clock, ocr_available=config.ocr)
     pipeline = RunPipeline(
         sync=SyncSitemaps(gateway, store, clock),
         triage=TriageNewRecords(gateway, store, store, catalog, clock),

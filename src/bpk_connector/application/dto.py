@@ -6,7 +6,9 @@ from dataclasses import dataclass
 from datetime import date, datetime
 from enum import StrEnum
 
+from bpk_connector.domain.file_roles import FileRole
 from bpk_connector.domain.models import FileRef, Regulation
+from bpk_connector.domain.text_quality import TextQuality
 
 
 @dataclass(frozen=True)
@@ -119,6 +121,7 @@ class StoredText:
     pages_without_text: int = 0
     chars: int = 0
     note: str = ""
+    quality: TextQuality | None = None  # None: extracted before quality was assessed (2026-10-16), or unreadable
 
     @property
     def coverage(self) -> float:
@@ -131,11 +134,12 @@ SELF_EXTRACTED_TEXT = {"origin": "self_extracted", "rights": "public", "language
 
 @dataclass(frozen=True)
 class BundleFile:
-    """A file we hold for a regulation, and the text we extracted from it (None when there is none)."""
+    """A file we hold for a regulation, what it is to the regulation, and its text (None when there is none)."""
 
     ref: FileRef
     stored: StoredFile
     text: StoredText | None
+    role: FileRole
 
 
 @dataclass(frozen=True)

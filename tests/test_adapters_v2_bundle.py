@@ -10,6 +10,7 @@ from metamorph_contract import Bundle, Confidence, FileRole, Kind, Relation, Sta
 from bpk_connector.adapters.storage.blobs import FileBlobStore
 from bpk_connector.adapters.storage.v2_bundle import V2BundleWriter
 from bpk_connector.application.dto import BundleCitation, BundleDocument, BundleFile, Method, StoredFile, StoredText
+from bpk_connector.domain import file_roles
 from bpk_connector.domain.models import FileRef, Regulation
 
 FETCHED = datetime(2026, 10, 12, 5, 0, tzinfo=UTC)
@@ -22,6 +23,7 @@ P2SK = Regulation(
 
 def bundle_document(blobs: FileBlobStore, **changes) -> BundleDocument:
     law = blobs.put(b"%PDF law")
+    annex = blobs.put(b"%PDF annex")
     ruling = blobs.put(b"%PDF ruling")
     text = blobs.put(b"<!-- page 1 -->\nUNDANG-UNDANG\n\n<!-- page 2 -->\nPasal 1")
     values = {
@@ -32,9 +34,13 @@ def bundle_document(blobs: FileBlobStore, **changes) -> BundleDocument:
         "files": (
             BundleFile(FileRef("1", "UU 4 2023.pdf", "/Download/1/UU.pdf"),
                        StoredFile(law, None, 8, "application/pdf", "https://bpk/1", fetched_at=FETCHED),
-                       StoredText(law, text, Method.OCR, pages=2)),
+                       StoredText(law, text, Method.OCR, pages=2), file_roles.FileRole.MAIN),
+            BundleFile(FileRef("3", "UU 4 2023 - Lampiran.pdf", "/Download/3/Lampiran.pdf"),
+                       StoredFile(annex, None, 10, "application/pdf", "https://bpk/3", fetched_at=FETCHED), None,
+                       file_roles.FileRole.ANNEX),
             BundleFile(FileRef("2", "Putusan MK.pdf", "/Download/2/MK.pdf", category="UjiMateri"),
-                       StoredFile(ruling, None, 11, "application/pdf", "https://bpk/2", fetched_at=FETCHED), None),
+                       StoredFile(ruling, None, 11, "application/pdf", "https://bpk/2", fetched_at=FETCHED), None,
+                       file_roles.FileRole.OTHER),
         ),
         "citations": (BundleCitation("amends", "Mengubah", "UU No. 40 Tahun 2014", "Perasuransian", "id:uu:2014:40"),),
         "fetched_at": FETCHED,
@@ -82,7 +88,9 @@ def test_files_texts_and_citations_are_carried(tmp_path: Path) -> None:
     bundle = write(tmp_path, blobs, bundle_document(blobs))
 
     document = next(bundle.entries()).document
-    assert [(f.role, f.title) for f in document.files] == [(FileRole.MAIN, None), (FileRole.OTHER, "Putusan MK.pdf")]
+    assert [(f.role, f.title) for f in document.files] == [
+        (FileRole.MAIN, None), (FileRole.ANNEX, "UU 4 2023 - Lampiran.pdf"), (FileRole.OTHER, "Putusan MK.pdf")
+    ]  # fmt: skip
     [text] = document.texts
     assert (text.of_file, text.method, text.paged) == (document.files[0].sha256, "ocr", True)
     assert split_pages(bundle.blob_path(text.sha256).read_text()) == [(1, "UNDANG-UNDANG"), (2, "Pasal 1")]

@@ -169,6 +169,12 @@ RULES = (
         "text_incomplete", Severity.WARNING, "{n} target(s) with pages needing OCR", event_kinds=("text_needs_ocr",)
     ),
     _CountRule(
+        "text_damaged",
+        Severity.WARNING,
+        "{n} target(s) whose text has OCR-damaged article headings",
+        event_kinds=("text_damaged",),
+    ),
+    _CountRule(
         "link_inconsistency",
         Severity.INFO,
         "{n} link(s) BPK shows on one side only",

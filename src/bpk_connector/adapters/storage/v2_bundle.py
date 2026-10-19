@@ -33,7 +33,7 @@ from metamorph_contract import (
 
 from bpk_connector.application.dto import BundleCitation, BundleDocument, BundleFile
 from bpk_connector.application.ports import BlobStore
-from bpk_connector.application.use_cases.export_corpus import DETAILS_URL, MAIN_CATEGORY, SOURCE
+from bpk_connector.application.use_cases.export_corpus import DETAILS_URL, SOURCE
 from bpk_connector.domain.identity import ISSUER, family_of, source_id
 
 LAW_FAMILIES = {"uu", "perppu", "uudrt"}  # everything else BPK holds is a regulation below a law
@@ -139,14 +139,14 @@ def _aliases(bpk_aliases: str, title: str) -> tuple[str, ...]:
 
 
 def _file_ref(file: BundleFile) -> FileRef:
-    is_main = file.ref.category == MAIN_CATEGORY
+    role = FileRole(file.role)  # the contract spells main, annex and other as we do
     return FileRef(
         sha256=file.stored.sha256,
-        role=FileRole.MAIN if is_main else FileRole.OTHER,  # e.g. a Constitutional Court judicial-review ruling
+        role=role,
         media_type=file.stored.media_type,
         source_url=file.stored.url,
         rights=Rights.PUBLIC,
-        title=None if is_main else file.ref.name,
+        title=None if role is FileRole.MAIN else file.ref.name,  # "Lampiran I.B …", a ruling's case number
         pages=file.text.pages if file.text and file.text.pages else None,
     )
 

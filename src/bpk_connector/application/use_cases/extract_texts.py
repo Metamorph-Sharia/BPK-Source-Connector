@@ -1,6 +1,8 @@
 """ExtractTexts: Indonesian text from every stored official file of every target, once per file.
 
 Keyed by the file's sha256, so a rerun extracts nothing new and a replaced file is extracted again.
+Each text is stored with how well its article headings read (domain/text_quality.py); one whose
+headings are still OCR-damaged is reported, because the structure parser turns each into a cascade.
 Text we extract from an official file is ``self_extracted`` and ``public``.
 """
 
@@ -20,6 +22,7 @@ from bpk_connector.application.ports import (
 )
 from bpk_connector.application.targets import all_targets
 from bpk_connector.domain.models import ChangeEvent, FileRef
+from bpk_connector.domain.text_quality import assess
 
 
 @dataclass
@@ -27,6 +30,7 @@ class ExtractSummary:
     extracted: int = 0
     pages: int = 0
     needs_ocr: list[str] = field(default_factory=list)
+    damaged: list[str] = field(default_factory=list)  # article headings still OCR-damaged
     unsupported: list[str] = field(default_factory=list)
 
 
@@ -40,7 +44,7 @@ class ExtractTexts:
         catalog: TargetCatalog,
         clock: Clock,
         *,
-        upgrade_incomplete: bool = False,
+        ocr_available: bool = False,
     ) -> None:
         self.repository = repository
         self.blobs = blobs
@@ -48,8 +52,10 @@ class ExtractTexts:
         self.events = events
         self.catalog = catalog
         self.clock = clock
-        # When the extractor can OCR: re-extract, once, texts the text layer alone left incomplete.
-        self.upgrade_incomplete = upgrade_incomplete
+        # When the extractor can OCR, texts it can now do better are extracted again, once: those the text
+        # layer alone left incomplete, and those extracted before quality was assessed (their text layer
+        # may be the publisher's damaged OCR, which the extractor now reads again).
+        self.ocr_available = ocr_available
 
     def run(self, run_id: str, *, retry_unsupported: bool = False) -> ExtractSummary:
         summary = ExtractSummary()
@@ -68,7 +74,9 @@ class ExtractTexts:
             return True
         if held.method == Method.UNSUPPORTED:
             return retry_unsupported
-        return self.upgrade_incomplete and held.method == Method.TEXT_LAYER and held.pages_without_text > 0
+        if not self.ocr_available:
+            return False
+        return held.quality is None or (held.method == Method.TEXT_LAYER and held.pages_without_text > 0)
 
     def _extract(self, record_id: str, ref: FileRef, file_sha256: str, summary: ExtractSummary) -> ChangeEvent:
         try:
@@ -79,6 +87,7 @@ class ExtractTexts:
             )
             summary.unsupported.append(ref.path)
             return ChangeEvent("text_unsupported", record_id, {**ref.summary, "reason": str(e)})
+        quality = assess(extracted.text)
         text = StoredText(
             file_sha256,
             self.blobs.put(extracted.text.encode("utf-8")),
@@ -86,12 +95,21 @@ class ExtractTexts:
             extracted.pages,
             extracted.pages_without_text,
             len(extracted.text),
+            quality=quality,
         )
         self.repository.save_text(text, at=self.clock.now())
         summary.extracted += 1
         summary.pages += extracted.pages
         if extracted.needs_ocr:
             summary.needs_ocr.append(ref.path)
+        if quality.is_damaged:
+            summary.damaged.append(ref.path)
         detail = {**ref.summary, "pages": extracted.pages, "pages_without_text": extracted.pages_without_text}
-        kind = "text_needs_ocr" if extracted.needs_ocr else "text_extracted"
-        return ChangeEvent(kind, record_id, detail | {"coverage": extracted.coverage})
+        detail |= {"coverage": extracted.coverage, "damaged_headings": quality.damaged_headings}
+        return ChangeEvent(_event_kind(extracted.needs_ocr, quality.is_damaged), record_id, detail)
+
+
+def _event_kind(needs_ocr: bool, damaged: bool) -> str:
+    if needs_ocr:
+        return "text_needs_ocr"
+    return "text_damaged" if damaged else "text_extracted"
