@@ -59,6 +59,7 @@ dependencies = [
     { name = "beautifulsoup4" },
     { name = "httpx" },
     { name = "metamorph-contract" },
+    { name = "metamorph-pdf-text" },
     { name = "ocrmypdf" },
     { name = "pymupdf" },
 ]
@@ -73,6 +74,7 @@ requires-dist = [
     { name = "beautifulsoup4", specifier = ">=4.12" },
     { name = "httpx", specifier = ">=0.27" },
     { name = "metamorph-contract", editable = "../Metamorph-Knowledge-Platform/packages/metamorph-contract" },
+    { name = "metamorph-pdf-text", editable = "../Metamorph-Knowledge-Platform/packages/metamorph-pdf-text" },
     { name = "ocrmypdf", specifier = ">=16" },
     { name = "pymupdf", specifier = ">=1.24" },
 ]
@@ -750,7 +752,7 @@ wheels = [
 
 [[package]]
 name = "metamorph-contract"
-version = "2.0.0"
+version = "2.1.0"
 source = { editable = "../Metamorph-Knowledge-Platform/packages/metamorph-contract" }
 dependencies = [
     { name = "jsonschema" },
@@ -761,6 +763,23 @@ dependencies = [
 requires-dist = [
     { name = "jsonschema", specifier = ">=4.23" },
     { name = "rfc3339-validator", specifier = ">=0.1.4" },
+]
+
+[[package]]
+name = "metamorph-pdf-text"
+version = "0.1.0"
+source = { editable = "../Metamorph-Knowledge-Platform/packages/metamorph-pdf-text" }
+dependencies = [
+    { name = "httpx" },
+    { name = "metamorph-contract" },
+    { name = "pymupdf" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "httpx", specifier = ">=0.27" },
+    { name = "metamorph-contract", editable = "../Metamorph-Knowledge-Platform/packages/metamorph-contract" },
+    { name = "pymupdf", specifier = ">=1.24" },
 ]
 
 [[package]]

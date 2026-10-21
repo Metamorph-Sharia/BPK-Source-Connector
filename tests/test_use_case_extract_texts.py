@@ -19,7 +19,7 @@ class FakeExtractor:
         self.calls = 0
         self.method = "text_layer"
 
-    def extract(self, data: bytes) -> ExtractedText:
+    def extract(self, data: bytes, role="main") -> ExtractedText:
         self.calls += 1
         if data.startswith(b"PK"):
             raise NotExtractable("not a PDF: zip")
@@ -59,6 +59,14 @@ def test_a_file_already_extracted_is_not_extracted_again() -> None:
     use_case.run("run-1")
 
     assert use_case.run("run-2").extracted == 0 and extractor.calls == 1
+
+
+def test_every_file_is_extracted_again_when_asked_after_the_extraction_changed() -> None:
+    """`extract --again`: after a change to how text is read (METAMORPH_PDF_LINES), and to roll one back."""
+    use_case, _, _, _, extractor = world((LAW, b"%PDF law"), (ANNEX, b"PK\x03\x04"))
+    use_case.run("run-1")
+
+    assert use_case.run("run-2", again=True).extracted == 1 and extractor.calls == 4  # every file, the annex too
 
 
 def test_pages_needing_ocr_are_reported() -> None:

@@ -21,6 +21,7 @@ from bpk_connector.application.dto import (
     StoredFile,
     StoredText,
 )
+from bpk_connector.domain.file_roles import FileRole
 from bpk_connector.domain.models import ChangeEvent, FileRef, Regulation, Target
 from bpk_connector.domain.targeting import WatchRules
 
@@ -182,4 +183,7 @@ class NotExtractable(Exception):
 
 
 class TextExtractor(Protocol):
-    def extract(self, data: bytes) -> ExtractedText: ...
+    def extract(self, data: bytes, role: FileRole = FileRole.MAIN) -> ExtractedText:
+        """`role`: the file's to its regulation, which decides how carefully an engine reads it (MinerU reads the
+        regulation with its vision model, an annex's tables with its small models)."""
+        ...

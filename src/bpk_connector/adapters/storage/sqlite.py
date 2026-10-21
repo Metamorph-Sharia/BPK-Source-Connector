@@ -13,11 +13,20 @@ from datetime import date, datetime
 from pathlib import Path
 from typing import Any
 
-from bpk_connector.application.dto import Candidate, Method, SitemapEntry, SitemapFile, StoredFile, StoredText
+from bpk_connector.application.dto import (
+    Candidate,
+    Extraction,
+    Method,
+    SitemapEntry,
+    SitemapFile,
+    StoredFile,
+    StoredText,
+)
 from bpk_connector.domain.models import ChangeEvent, FileRef, Regulation, Relation, Target, TargetOrigin, Tier
 from bpk_connector.domain.text_quality import TextQuality
 
-SCHEMA_VERSION = 5  # v2: files.last_modified · v3: candidate decisions, sitemap state · v4: texts · v5: text quality
+SCHEMA_VERSION = 6  # v2: files.last_modified · v3: candidate decisions, sitemap state · v4: texts · v5: text quality
+# · v6: texts.extraction
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS records (
     record_id TEXT PRIMARY KEY,
@@ -58,7 +67,8 @@ CREATE TABLE IF NOT EXISTS texts (
     note TEXT NOT NULL,
     extracted_at TEXT NOT NULL,
     clean_headings INTEGER,
-    damaged_headings INTEGER
+    damaged_headings INTEGER,
+    extraction TEXT  -- JSON: how an engine read it (contract 2.1 Extraction); NULL: read by the connector
 );
 CREATE TABLE IF NOT EXISTS sitemap_files (
     year TEXT PRIMARY KEY,
@@ -126,6 +136,7 @@ class SqliteStore:
             ("candidates", "note", "TEXT"),
             ("texts", "clean_headings", "INTEGER"),
             ("texts", "damaged_headings", "INTEGER"),
+            ("texts", "extraction", "TEXT"),
         )
         for table, column, kind in added:
             columns = {r[1] for r in self.db.execute(f"PRAGMA table_info({table})")}
@@ -212,9 +223,10 @@ class SqliteStore:
         quality = (
             None if row["damaged_headings"] is None else TextQuality(row["clean_headings"], row["damaged_headings"])
         )
+        extraction = Extraction(**json.loads(row["extraction"])) if row["extraction"] else None
         return StoredText(
             row["file_sha256"], row["text_sha256"], Method(row["method"]), row["pages"], row["pages_without_text"],
-            row["chars"], row["note"], quality,
+            row["chars"], row["note"], quality, extraction,
         )  # fmt: skip
 
     def save_text(self, text: StoredText, *, at: datetime) -> None:
@@ -222,11 +234,13 @@ class SqliteStore:
         with self.db:
             self.db.execute(
                 """INSERT OR REPLACE INTO texts (file_sha256, text_sha256, method, pages, pages_without_text, chars,
-                   note, extracted_at, clean_headings, damaged_headings) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                   note, extracted_at, clean_headings, damaged_headings, extraction)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                 (
                     text.file_sha256, text.text_sha256, text.method, text.pages, text.pages_without_text,
                     text.chars, text.note, at.isoformat(),
                     quality.clean_headings if quality else None, quality.damaged_headings if quality else None,
+                    json.dumps(asdict(text.extraction)) if text.extraction else None,
                 ),
             )  # fmt: skip
 

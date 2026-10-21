@@ -20,6 +20,7 @@ import pymupdf
 
 from bpk_connector.adapters.extraction.pdf import PdfTextExtractor, compose, has_text
 from bpk_connector.application.dto import ExtractedText, Method
+from bpk_connector.domain.file_roles import FileRole
 from bpk_connector.domain.text_quality import assess
 
 log = logging.getLogger(__name__)
@@ -31,6 +32,10 @@ OCR_DPI = 300  # Tesseract's sweet spot for printed text
 # Tesseract's "single column" layout. Its default analysis reads a hanging indent's markers ("(1)") as a
 # column of their own, so they land away from their paragraphs and the parser loses ayat.
 PAGE_SEGMENTATION = 4
+# What OCR recognised is read as pymupdf sets it, not a printed line to a line (pdf.py): OCR finds stray marks
+# beside a heading (a ":" or a table's "|"), and joined onto its line they hide it ("Pasal 172 :"). Measured on
+# BPK's 40 OCR'd texts (2026-10-20): printed lines gave 3 more structure problems, omnibus laws' nesting changed.
+RECOGNISED = PdfTextExtractor(printed_lines=False)
 
 
 class OcrTextExtractor:
@@ -38,7 +43,7 @@ class OcrTextExtractor:
         self.languages = languages
         self.text_layer = text_layer or PdfTextExtractor()
 
-    def extract(self, data: bytes) -> ExtractedText:
+    def extract(self, data: bytes, role: FileRole = FileRole.MAIN) -> ExtractedText:
         pages = self.text_layer.page_texts(data)
         missing = [n for n, page in enumerate(pages) if not has_text(page)]
         layer = assess(_joined(pages))
@@ -68,7 +73,7 @@ class OcrTextExtractor:
             use_threads=True,  # no worker processes: safe under the orchestrator and in tests
             tesseract_pagesegmode=PAGE_SEGMENTATION,
         )
-        return self.text_layer.page_texts(output.getvalue())
+        return RECOGNISED.page_texts(output.getvalue())
 
 
 def _joined(pages: list[str]) -> str:

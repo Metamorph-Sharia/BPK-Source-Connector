@@ -45,6 +45,9 @@ def _parser() -> argparse.ArgumentParser:
     fetch.add_argument("--max-mb", type=int)
     extract = sub.add_parser("extract", help="extract text from stored files not yet extracted (no network)")
     extract.add_argument("--retry-unsupported", action="store_true", help="try again files once found unreadable")
+    extract.add_argument(
+        "--again", action="store_true", help="every stored file, extracted before or not (METAMORPH_PDF_LINES changed)"
+    )
     export = sub.add_parser("export", help="rebuild data/corpus/ from what we hold (no network)")
     export.add_argument(
         "--format", choices=["corpus", "v2"], default="corpus",
@@ -177,7 +180,9 @@ COMMANDS: dict[str, Callable[[App, argparse.Namespace], int]] = {
         )
     ),
     "extract": _printing(
-        lambda app, args: asdict(app.extract.run(f"extract-{_run_id()}", retry_unsupported=args.retry_unsupported))
+        lambda app, args: asdict(
+            app.extract.run(f"extract-{_run_id()}", retry_unsupported=args.retry_unsupported, again=args.again)
+        )
     ),
     "export": _export,
     "reparse": _printing(

@@ -36,7 +36,7 @@ class MemoryStore:
 
 
 class FakeExtractor:
-    def extract(self, data: bytes) -> ExtractedText:
+    def extract(self, data: bytes, role="main") -> ExtractedText:
         if not data.startswith(b"%PDF"):
             raise NotExtractable("not a PDF: zip")
         return ExtractedText("<!-- page 1 -->\nUNDANG-UNDANG NOMOR 4 TAHUN 2023", 1, 0, "text_layer")

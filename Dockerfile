@@ -18,6 +18,7 @@ RUN useradd --create-home --uid 1000 connector && mkdir /bundles && chown connec
 
 WORKDIR /workspace/BPK-Source-Connector
 COPY Metamorph-Knowledge-Platform/packages/metamorph-contract /workspace/Metamorph-Knowledge-Platform/packages/metamorph-contract
+COPY Metamorph-Knowledge-Platform/packages/metamorph-pdf-text /workspace/Metamorph-Knowledge-Platform/packages/metamorph-pdf-text
 COPY BPK-Source-Connector/pyproject.toml ./pyproject.toml
 COPY BPK-Source-Connector/uv.lock ./uv.lock
 COPY BPK-Source-Connector/README.md ./README.md

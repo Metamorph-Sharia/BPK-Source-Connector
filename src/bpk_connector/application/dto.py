@@ -93,6 +93,18 @@ class Method(StrEnum):
 
 
 @dataclass(frozen=True)
+class Extraction:
+    """How an engine (MinerU) read a file: kept with its text, and exported as contract 2.1 records it."""
+
+    engine: str
+    engine_version: str
+    tier: str
+    ocr_mode: str  # "txt": the PDF's characters; "ocr": its page images
+    pages_ocrd: int
+    pages_fallen_back: int  # pages the engine's reading couldn't be trusted on, kept as the text layer
+
+
+@dataclass(frozen=True)
 class ExtractedText:
     """Indonesian text extracted from one official file, with how complete it is."""
 
@@ -100,6 +112,7 @@ class ExtractedText:
     pages: int
     pages_without_text: int  # usually scanned pages: need OCR
     method: Method
+    extraction: Extraction | None = None  # how an engine read it (MinerU, contract 2.1); None: read here
 
     @property
     def coverage(self) -> float:
@@ -122,6 +135,7 @@ class StoredText:
     chars: int = 0
     note: str = ""
     quality: TextQuality | None = None  # None: extracted before quality was assessed (2026-10-16), or unreadable
+    extraction: Extraction | None = None  # how an engine read it (MinerU); None: the connector's own reading
 
     @property
     def coverage(self) -> float:

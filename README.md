@@ -52,7 +52,9 @@ uv run bpk-connector status      # counts: records, targets found, candidates, f
 uv run bpk-connector events --since 2026-10-01   # what changed: new, amended, revoked, files, triage decisions
 ```
 
-Other commands, each one stage on its own: `check`, `fetch` (`--max-mb` budget), `extract` (`--retry-unsupported`), `export` and `reparse` (re-apply the parser to stored pages). The last three need no network.
+Other commands, each one stage on its own: `check`, `fetch` (`--max-mb` budget), `extract` (`--retry-unsupported`; `--again` re-extracts every stored file), `export` and `reparse` (re-apply the parser to stored pages). The last three need no network.
+
+**PDF text** is read a printed line to a line (`metamorph_contract.printed_text`): PyMuPDF's own lines split a justified line set word by word, and an ayat's number from its text. `METAMORPH_PDF_LINES=extracted` keeps PyMuPDF's lines, as before; `extract --again` applies either to the files already held.
 
 **Reports:**
 - `data/reports/latest.md` and `latest.json`: each run's stages and alerts.

@@ -2,17 +2,21 @@
 
 from __future__ import annotations
 
+import os
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 
 import httpx
+from metamorph_contract import wants_printed_lines
+from metamorph_pdf_text import from_environment, wants_mineru
 
 from bpk_connector import __version__
 from bpk_connector.adapters.bpk.detail_parser import parse_detail
 from bpk_connector.adapters.bpk.gateway import BASE_URL, HttpBpkGateway
 from bpk_connector.adapters.catalog.files import FileCatalog
 from bpk_connector.adapters.extraction.archive import ArchiveTextExtractor
+from bpk_connector.adapters.extraction.mineru import MinerUTextExtractor
 from bpk_connector.adapters.extraction.ocr import OcrTextExtractor, ocr_problems
 from bpk_connector.adapters.extraction.pdf import PdfTextExtractor
 from bpk_connector.adapters.monitoring.reports import ReportFiles
@@ -80,13 +84,20 @@ def build_gateway(config: Config) -> HttpBpkGateway:
 
 
 def build_extractor(config: Config) -> TextExtractor:
-    pdf = OcrTextExtractor(config.ocr_languages) if config.ocr else PdfTextExtractor()
+    """`METAMORPH_PDF_ENGINE=mineru` reads with MinerU (adapters/extraction/mineru.py). Otherwise the text layer and
+    OCR, as before; `METAMORPH_PDF_LINES=extracted` keeps pymupdf's own lines (metamorph_contract.printed_lines)."""
+    if wants_mineru(os.environ):
+        pdf: TextExtractor = MinerUTextExtractor(from_environment(os.environ))
+    else:
+        text_layer = PdfTextExtractor(printed_lines=wants_printed_lines(os.environ))
+        pdf = OcrTextExtractor(config.ocr_languages, text_layer) if config.ocr else text_layer
     return ArchiveTextExtractor(pdf)  # .zip annexes hold PDFs too (Perpres 10/2021's investment list)
 
 
 def environment_problems(config: Config) -> list[str]:
-    """What this machine lacks to run the connector as configured. Checked before work starts."""
-    return ocr_problems(config.ocr_languages) if config.ocr else []
+    """What this machine lacks to run the connector as configured. Checked before work starts. MinerU OCRs
+    itself, so it needs no Tesseract."""
+    return ocr_problems(config.ocr_languages) if config.ocr and not wants_mineru(os.environ) else []
 
 
 def build_catalog(config: Config) -> FileCatalog:
