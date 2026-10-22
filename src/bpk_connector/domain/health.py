@@ -31,10 +31,7 @@ def check_health(
     *,
     now: datetime,
     max_hours: float,
-    environment_problems: list[str] = (),
 ) -> HealthResult:
-    if environment_problems:
-        return HealthResult(Health.CRITICAL, "this machine can't run the connector: " + "; ".join(environment_problems))
     if last_success is None:
         return HealthResult(Health.CRITICAL, "no successful run yet")
     hours = (now - last_success).total_seconds() / 3600

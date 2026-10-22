@@ -19,7 +19,6 @@ KNOWN = {
     "targets": {"targets_csv", "watch_toml"},
     "source": {"requests_per_second", "max_attempts", "max_file_mb", "max_mb_per_run"},
     "monitoring": {"max_hours_between_runs"},
-    "extraction": {"ocr", "ocr_languages"},
 }
 
 
@@ -39,8 +38,6 @@ class Config:
     max_file_bytes: int = 200 * MB
     max_bytes_per_run: int = 2048 * MB
     max_hours_between_runs: float = 36.0  # `health` turns critical after this without a successful run
-    ocr: bool = True  # OCR pages without a text layer; needs Tesseract + its language data + Ghostscript
-    ocr_languages: str = "ind+eng"
 
 
 def load_config(path: Path | str = DEFAULT_CONFIG_PATH) -> Config:
@@ -66,8 +63,6 @@ def load_config(path: Path | str = DEFAULT_CONFIG_PATH) -> Config:
         max_file_bytes=int(source.get("max_file_mb", 200)) * MB,
         max_bytes_per_run=int(source.get("max_mb_per_run", 2048)) * MB,
         max_hours_between_runs=float(raw.get("monitoring", {}).get("max_hours_between_runs", 36.0)),
-        ocr=bool(raw.get("extraction", {}).get("ocr", True)),
-        ocr_languages=str(raw.get("extraction", {}).get("ocr_languages", "ind+eng")),
     )
 
 

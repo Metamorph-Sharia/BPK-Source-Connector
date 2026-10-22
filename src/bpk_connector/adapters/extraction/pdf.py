@@ -1,12 +1,11 @@
 """``TextExtractor`` with pymupdf: the PDF's own text layer, page by page.
 
-98% of target pages have a text layer (measured 2026-10-13); pages without one are counted so
-they can be OCR'd once OCR tools are installed (``ocrmypdf`` + Tesseract ``ind``).
+The rollback engine (``METAMORPH_PDF_ENGINE=pymupdf``): 98% of target pages have a text layer (measured
+2026-10-13), and pages without one are counted as needing OCR, which MinerU does (mineru.py).
 
 A page's text is a printed line to a line (``metamorph_contract.printed_text``): pymupdf's own lines split a
 justified line set a word at a time, and a list's number from its text. ``printed_lines=False`` keeps pymupdf's
-own lines, as before (``METAMORPH_PDF_LINES=extracted``, read in wiring). What OCR recognised is always read
-with pymupdf's own lines (ocr.py).
+own lines, as before (``METAMORPH_PDF_LINES=extracted``, read in wiring).
 """
 
 from __future__ import annotations

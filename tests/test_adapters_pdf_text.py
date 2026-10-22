@@ -7,7 +7,6 @@ import pytest
 
 from bpk_connector.adapters.extraction.pdf import PdfTextExtractor
 from bpk_connector.application.ports import NotExtractable
-from bpk_connector.config import Config
 from bpk_connector.wiring import build_extractor
 
 BODY = "Dengan Rahmat Tuhan Yang Maha Esa, Presiden Republik Indonesia, menimbang bahwa"
@@ -48,12 +47,10 @@ def test_pymupdfs_own_lines_are_kept_when_asked_for() -> None:
 
 
 def test_extraction_lines_follow_the_metamorph_pdf_lines_setting(monkeypatch: pytest.MonkeyPatch, tmp_path) -> None:
-    config = Config(tmp_path / "pipeline.toml", tmp_path, tmp_path / "t.csv", tmp_path / "w.toml", "test", ocr=False)
-
     monkeypatch.setenv("METAMORPH_PDF_LINES", "extracted")
-    assert build_extractor(config).extract(set_apart()).text.count("\n") > 3
+    assert build_extractor().extract(set_apart()).text.count("\n") > 3
     monkeypatch.delenv("METAMORPH_PDF_LINES")
-    assert "selanjutnya disebut" in build_extractor(config).extract(set_apart()).text
+    assert "selanjutnya disebut" in build_extractor().extract(set_apart()).text
 
 
 def test_text_is_extracted_page_by_page_with_markers() -> None:

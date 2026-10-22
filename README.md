@@ -24,24 +24,14 @@ BPK holds ~310,000 records from every ministry, agency and region, and most are 
 
 ## System requirements
 
-Besides Python ≥ 3.11 and [uv](https://docs.astral.sh/uv/), OCR needs three system tools. 18 target files have scanned pages, and one regulation (Permenko 13/2024) is fully scanned:
+Python ≥ 3.11 and [uv](https://docs.astral.sh/uv/). PDFs are read by MinerU (`METAMORPH_PDF_ENGINE=mineru`, the platform's [metamorph-pdf-text](../Metamorph-Knowledge-Platform/packages/metamorph-pdf-text)), which also OCRs scanned pages: 18 target files have them, and one regulation (Permenko 13/2024) is fully scanned. The MinerU service runs beside the platform (its README: Running MinerU). Without that setting, the connector reads the PDF's text layer only, the rollback engine, and counts the pages that would need OCR (`text_incomplete` alert).
 
-| Tool | Why | macOS (development) | Debian / Ubuntu (server) |
-|---|---|---|---|
-| Tesseract ≥ 4.1 | OCR engine | `brew install tesseract` | `apt-get install tesseract-ocr` |
-| Indonesian + English language data | `ocr_languages = "ind+eng"` | `brew install tesseract-lang` | `apt-get install tesseract-ocr-ind tesseract-ocr-eng` |
-| Ghostscript | used by ocrmypdf | `brew install ghostscript` | `apt-get install ghostscript` |
-
-`ocrmypdf` itself is a Python dependency, pinned in `uv.lock`, so `uv sync` installs the same version everywhere.
-
-**Publisher OCR.** Some BPK PDFs carry a text layer that is the publisher's own, poor OCR: its article headings are damaged (`Pasa122` for Pasal 22), and one such heading can hide every article after it from the platform's parser. When a text layer has any damaged heading, the connector OCRs every page itself and keeps the cleaner reading ([domain/text_quality.py](src/bpk_connector/domain/text_quality.py)). Texts still damaged afterwards raise the `text_damaged` alert.
-
-**Check a machine:** `uv run bpk-connector health` exits `2` and names anything missing. `run` and `extract` refuse to start without it, and so does `BPKConnector(...)` (it raises `EnvironmentNotReady`). A server can't silently leave scanned regulations without text. To run without OCR on purpose, set `[extraction] ocr = false`.
+**Publisher OCR.** Some BPK PDFs carry a text layer that is the publisher's own, poor OCR: its article headings are damaged (`Pasa122` for Pasal 22), and one such heading can hide every article after it from the platform's parser. MinerU reads such a file from its page images instead ([domain/text_quality.py](src/bpk_connector/domain/text_quality.py) measures the headings). Texts still damaged afterwards raise the `text_damaged` alert.
 
 ## Quick start
 
 ```bash
-uv sync                          # Python >= 3.11; installs httpx, beautifulsoup4, pymupdf, ocrmypdf (+ pytest)
+uv sync                          # Python >= 3.11; installs httpx, beautifulsoup4, pymupdf, metamorph-pdf-text (+ pytest)
 uv run pytest                    # offline: recorded BPK pages, fakes for every port
 
 uv run bpk-connector run         # the scheduled job (daily): sync sitemaps, triage new records, check targets,
@@ -80,7 +70,7 @@ fetched = connector.fetch(discovery.items[0], store)  # detail page + every offi
 `fetch` saves, through `store.put()`:
 - the detail page,
 - every official file,
-- the Indonesian text extracted from each file, with OCR where pages are scanned and zip annexes unpacked.
+- the Indonesian text extracted from each file, by MinerU (OCR included where pages are scanned), and zip annexes unpacked.
 
 So the orchestrator gets the same artifacts as the standalone pipeline.
 
@@ -99,7 +89,7 @@ Writes every target we hold as one [contract v2 bundle](../Metamorph-Knowledge-P
 - **Citations:** what a regulation does to others, from BPK's "Status Peraturan" (`Mengubah` → amends, `Mencabut` → revokes, `Mencabut sebagian` → partly_revokes). The other side's labels (`Diubah dengan` …) set the regulation's own status: amended, partly revoked, revoked ([domain/standing.py](src/bpk_connector/domain/standing.py)).
 - **Files and texts:** the official file (`main`), its annex volumes (`annex`), judicial-review rulings (`other`), and the text extracted from each. BPK files annexes under the same category as the regulation; the connector tells them apart by name ("Lampiran"), so the platform parses only the regulation's structure ([domain/file_roles.py](src/bpk_connector/domain/file_roles.py)). BPK's abstract stays out, as in the corpus.
 
-**As a container:** the platform's Airflow runs this connector from [Dockerfile](Dockerfile), built from the workspace root, the directory holding every repository: `docker build -f BPK-Source-Connector/Dockerfile -t metamorph/bpk-connector:dev .` (or `docker compose --profile connectors build` in Metamorph-Knowledge-Platform). `data/` is bind-mounted, not copied, so scheduled runs and your own CLI runs share one store. Don't run both at once. The image includes Tesseract (`ind`, `eng`) and Ghostscript for OCR.
+**As a container:** the platform's Airflow runs this connector from [Dockerfile](Dockerfile), built from the workspace root, the directory holding every repository: `docker build -f BPK-Source-Connector/Dockerfile -t metamorph/bpk-connector:dev .` (or `docker compose --profile connectors build` in Metamorph-Knowledge-Platform). `data/` is bind-mounted, not copied, so scheduled runs and your own CLI runs share one store. Don't run both at once. MinerU runs as its own service, so the image holds no OCR tools.
 
 ## How it fits together
 

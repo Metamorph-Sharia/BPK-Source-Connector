@@ -30,15 +30,3 @@ def test_the_last_runs_worst_alert_sets_the_status() -> None:
     assert check_health(recent, Severity.WARNING, now=NOW, max_hours=36).status is Health.WARNING
     assert check_health(recent, Severity.ERROR, now=NOW, max_hours=36).status is Health.CRITICAL
     assert Health.CRITICAL.exit_code == 2
-
-
-def test_a_machine_missing_required_tools_is_critical_whatever_the_last_run_did() -> None:
-    result = check_health(
-        NOW - timedelta(hours=1),
-        None,
-        now=NOW,
-        max_hours=36,
-        environment_problems=["Tesseract has no 'ind' language data"],
-    )
-
-    assert result.status is Health.CRITICAL and "ind" in result.message

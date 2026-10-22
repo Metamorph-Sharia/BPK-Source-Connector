@@ -40,7 +40,7 @@ from bpk_connector.source_connector import (
     SourceUnavailable,
     StoredFile,
 )
-from bpk_connector.wiring import build_catalog, build_extractor, build_gateway, environment_problems
+from bpk_connector.wiring import build_catalog, build_extractor, build_gateway
 
 log = logging.getLogger(__name__)
 
@@ -48,10 +48,6 @@ DETAILS_URL = "https://peraturan.bpk.go.id/Details/{}"
 HTML = "text/html"
 PDF = "application/pdf"
 TEXT = "text/plain; charset=utf-8"
-
-
-class EnvironmentNotReady(RuntimeError):
-    """This machine lacks what the configuration needs (e.g. OCR tools). Install them; see README."""
 
 
 class BPKConnector(SourceConnector):
@@ -70,11 +66,9 @@ class BPKConnector(SourceConnector):
         super().__init__(config)
         if gateway is None or catalog is None or extractor is None:
             settings = load_config(config.get("config", DEFAULT_CONFIG_PATH))
-            if problems := environment_problems(settings):
-                raise EnvironmentNotReady("; ".join(problems))
             gateway = gateway or build_gateway(settings)
             catalog = catalog or build_catalog(settings)
-            extractor = extractor or build_extractor(settings)
+            extractor = extractor or build_extractor()
         self.gateway = gateway
         self.catalog = catalog
         self.extractor = extractor

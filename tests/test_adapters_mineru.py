@@ -21,7 +21,6 @@ from bpk_connector.adapters.storage.blobs import FileBlobStore
 from bpk_connector.adapters.storage.sqlite import SqliteStore
 from bpk_connector.application.dto import Extraction, Method, StoredText
 from bpk_connector.application.ports import NotExtractable
-from bpk_connector.config import Config
 from bpk_connector.domain.file_roles import FileRole
 
 PDF = b"%PDF-1.7 PP 28/2025"
@@ -96,11 +95,8 @@ def test_the_bundle_records_how_the_text_was_read(tmp_path: Path) -> None:
     assert text.extraction == ContractExtraction("mineru", "4.0.12+t1", "basic", "ocr", 2, 0)
 
 
-def test_the_engine_setting_chooses_mineru_and_needs_no_tesseract(monkeypatch, tmp_path: Path) -> None:
+def test_the_engine_setting_chooses_mineru(monkeypatch, tmp_path: Path) -> None:
     monkeypatch.setenv("METAMORPH_PDF_ENGINE", "mineru")
     monkeypatch.setenv("METAMORPH_MINERU_URL", "http://mineru.test:8010")
     monkeypatch.setenv("METAMORPH_MINERU_CACHE", str(tmp_path / "cache"))
-    config = Config(tmp_path / "pipeline.toml", tmp_path, tmp_path / "t.csv", tmp_path / "w.toml", "test", ocr=True)
-
-    assert isinstance(wiring.build_extractor(config).inner, MinerUTextExtractor)
-    assert wiring.environment_problems(config) == []
+    assert isinstance(wiring.build_extractor().inner, MinerUTextExtractor)

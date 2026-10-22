@@ -34,19 +34,3 @@ def test_unknown_settings_are_refused(tmp_path: Path) -> None:
 
     with pytest.raises(ConfigError, match="requests_per_secnd"):
         load_config(path)
-
-
-def test_ocr_is_on_by_default_with_indonesian_and_english(tmp_path: Path) -> None:
-    path = tmp_path / "pipeline.toml"
-    path.write_text("")
-
-    config = load_config(path)
-
-    assert config.ocr and config.ocr_languages == "ind+eng"
-
-
-def test_ocr_can_be_switched_off(tmp_path: Path) -> None:
-    path = tmp_path / "pipeline.toml"
-    path.write_text("[extraction]\nocr = false\n")
-
-    assert load_config(path).ocr is False
