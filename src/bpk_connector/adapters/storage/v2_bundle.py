@@ -7,6 +7,7 @@ its types, its file layout, and its spelling of kinds, roles and statuses.
 from __future__ import annotations
 
 import re
+from dataclasses import asdict
 from pathlib import Path
 
 from metamorph_contract import (
@@ -30,6 +31,7 @@ from metamorph_contract import (
     TextRef,
     unresolved_id,
 )
+from metamorph_contract import Extraction as ContractExtraction
 
 from bpk_connector.application.dto import BundleCitation, BundleDocument, BundleFile
 from bpk_connector.application.ports import BlobStore
@@ -160,6 +162,7 @@ def _text_ref(file: BundleFile) -> TextRef:
         rights=Rights.PUBLIC,
         paged=True,
         of_file=file.stored.sha256,
+        extraction=ContractExtraction(**asdict(file.text.extraction)) if file.text.extraction else None,
     )
 
 

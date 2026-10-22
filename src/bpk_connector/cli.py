@@ -20,7 +20,7 @@ from bpk_connector.config import DEFAULT_CONFIG_PATH, MB, ConfigError, load_conf
 from bpk_connector.domain.alerts import Severity
 from bpk_connector.domain.health import check_health
 from bpk_connector.domain.models import Tier
-from bpk_connector.wiring import App, build, environment_problems
+from bpk_connector.wiring import App, build
 
 EXIT_OK, EXIT_PROBLEMS, EXIT_USAGE = 0, 2, 64
 
@@ -45,6 +45,9 @@ def _parser() -> argparse.ArgumentParser:
     fetch.add_argument("--max-mb", type=int)
     extract = sub.add_parser("extract", help="extract text from stored files not yet extracted (no network)")
     extract.add_argument("--retry-unsupported", action="store_true", help="try again files once found unreadable")
+    extract.add_argument(
+        "--again", action="store_true", help="every stored file, extracted before or not (METAMORPH_PDF_LINES changed)"
+    )
     export = sub.add_parser("export", help="rebuild data/corpus/ from what we hold (no network)")
     export.add_argument(
         "--format", choices=["corpus", "v2"], default="corpus",
@@ -91,16 +94,10 @@ def _export(app: App, args: argparse.Namespace) -> int:
     return EXIT_OK
 
 
-NEEDS_ENVIRONMENT = {"run", "extract"}
 RUN_SUMMARY = ("run_id", "status", "error", "worst_severity", "sync", "triage", "check", "fetch", "extract", "export")
 
 
 def _dispatch(app: App, args: argparse.Namespace) -> int:
-    problems = environment_problems(app.config)
-    if problems and args.command in NEEDS_ENVIRONMENT:
-        print("bpk-connector: this machine can't run the connector: " + "; ".join(problems), file=sys.stderr)
-        print("  see README.md, 'System requirements', or set [extraction] ocr = false", file=sys.stderr)
-        return EXIT_PROBLEMS
     return COMMANDS[args.command](app, args)
 
 
@@ -129,7 +126,6 @@ def _health(app: App, args: argparse.Namespace) -> int:
         worst,
         now=app.clock.now(),
         max_hours=app.config.max_hours_between_runs,
-        environment_problems=environment_problems(app.config),
     )
     _print({"health": result.status.name.lower(), "message": result.message})
     return result.status.exit_code
@@ -177,7 +173,9 @@ COMMANDS: dict[str, Callable[[App, argparse.Namespace], int]] = {
         )
     ),
     "extract": _printing(
-        lambda app, args: asdict(app.extract.run(f"extract-{_run_id()}", retry_unsupported=args.retry_unsupported))
+        lambda app, args: asdict(
+            app.extract.run(f"extract-{_run_id()}", retry_unsupported=args.retry_unsupported, again=args.again)
+        )
     ),
     "export": _export,
     "reparse": _printing(

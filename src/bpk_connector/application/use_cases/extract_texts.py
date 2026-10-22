@@ -21,6 +21,7 @@ from bpk_connector.application.ports import (
     TextExtractor,
 )
 from bpk_connector.application.targets import all_targets
+from bpk_connector.domain.file_roles import FileRole, file_roles
 from bpk_connector.domain.models import ChangeEvent, FileRef
 from bpk_connector.domain.text_quality import assess
 
@@ -57,14 +58,16 @@ class ExtractTexts:
         # may be the publisher's damaged OCR, which the extractor now reads again).
         self.ocr_available = ocr_available
 
-    def run(self, run_id: str, *, retry_unsupported: bool = False) -> ExtractSummary:
+    def run(self, run_id: str, *, retry_unsupported: bool = False, again: bool = False) -> ExtractSummary:
+        """`again`: every stored file, extracted before or not (after a change to how text is read)."""
         summary = ExtractSummary()
         for record_id in all_targets(self.repository, self.catalog):
             regulation = self.repository.regulation(record_id)
+            roles = file_roles(regulation.files) if regulation else {}
             for ref in regulation.files if regulation else ():
                 stored = self.repository.file_state(record_id, ref.path)
-                if stored and self._due(stored.sha256, retry_unsupported):
-                    event = self._extract(record_id, ref, stored.sha256, summary)
+                if stored and (again or self._due(stored.sha256, retry_unsupported)):
+                    event = self._extract(record_id, ref, roles[ref.path], stored.sha256, summary)
                     self.events.record(run_id, [event], at=self.clock.now())
         return summary
 
@@ -78,9 +81,11 @@ class ExtractTexts:
             return False
         return held.quality is None or (held.method == Method.TEXT_LAYER and held.pages_without_text > 0)
 
-    def _extract(self, record_id: str, ref: FileRef, file_sha256: str, summary: ExtractSummary) -> ChangeEvent:
+    def _extract(
+        self, record_id: str, ref: FileRef, role: FileRole, file_sha256: str, summary: ExtractSummary
+    ) -> ChangeEvent:
         try:
-            extracted = self.extractor.extract(self.blobs.get(file_sha256))
+            extracted = self.extractor.extract(self.blobs.get(file_sha256), role)
         except NotExtractable as e:
             self.repository.save_text(
                 StoredText(file_sha256, None, Method.UNSUPPORTED, note=str(e)), at=self.clock.now()
@@ -96,6 +101,7 @@ class ExtractTexts:
             extracted.pages_without_text,
             len(extracted.text),
             quality=quality,
+            extraction=extracted.extraction,
         )
         self.repository.save_text(text, at=self.clock.now())
         summary.extracted += 1

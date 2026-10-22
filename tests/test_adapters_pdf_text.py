@@ -7,6 +7,7 @@ import pytest
 
 from bpk_connector.adapters.extraction.pdf import PdfTextExtractor
 from bpk_connector.application.ports import NotExtractable
+from bpk_connector.wiring import build_extractor
 
 BODY = "Dengan Rahmat Tuhan Yang Maha Esa, Presiden Republik Indonesia, menimbang bahwa"
 
@@ -20,6 +21,36 @@ def pdf(*pages: str) -> bytes:
             page.insert_text((72, 72), text)
             page.insert_text((72, 90), BODY)
     return doc.tobytes()
+
+
+def set_apart() -> bytes:
+    """A justified line set a word at a time, and a list's number set apart from its text, as BI and BPK PDFs do."""
+    doc = pymupdf.open()
+    page = doc.new_page()
+    for n, word in enumerate(["selanjutnya", "disebut", "Pengolahan", "adalah", "kegiatan"]):
+        page.insert_text((72 + 80 * n, 100), word)
+    page.insert_text((72, 130), "1.")
+    page.insert_text((100, 130), "Uang Rupiah adalah alat pembayaran")
+    return doc.tobytes()
+
+
+def test_each_printed_line_is_one_line_of_the_text() -> None:
+    assert PdfTextExtractor().page_texts(set_apart()) == [
+        "selanjutnya disebut Pengolahan adalah kegiatan\n1. Uang Rupiah adalah alat pembayaran"
+    ]
+
+
+def test_pymupdfs_own_lines_are_kept_when_asked_for() -> None:
+    assert PdfTextExtractor(printed_lines=False).page_texts(set_apart()) == [
+        "selanjutnya\ndisebut\nPengolahan\nadalah\nkegiatan\n1.\nUang Rupiah adalah alat pembayaran"
+    ]
+
+
+def test_extraction_lines_follow_the_metamorph_pdf_lines_setting(monkeypatch: pytest.MonkeyPatch, tmp_path) -> None:
+    monkeypatch.setenv("METAMORPH_PDF_LINES", "extracted")
+    assert build_extractor().extract(set_apart()).text.count("\n") > 3
+    monkeypatch.delenv("METAMORPH_PDF_LINES")
+    assert "selanjutnya disebut" in build_extractor().extract(set_apart()).text
 
 
 def test_text_is_extracted_page_by_page_with_markers() -> None:

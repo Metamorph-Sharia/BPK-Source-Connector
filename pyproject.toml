@@ -8,8 +8,8 @@ dependencies = [
     "httpx>=0.27",
     "beautifulsoup4>=4.12",
     "pymupdf>=1.24",
-    "ocrmypdf>=16",
     "metamorph-contract",
+    "metamorph-pdf-text",  # METAMORPH_PDF_ENGINE=mineru: MinerU, checked against the text layer
 ]
 
 [project.scripts]
@@ -17,6 +17,7 @@ bpk-connector = "bpk_connector.cli:main"
 
 [tool.uv.sources]
 metamorph-contract = { path = "../Metamorph-Knowledge-Platform/packages/metamorph-contract", editable = true }
+metamorph-pdf-text = { path = "../Metamorph-Knowledge-Platform/packages/metamorph-pdf-text", editable = true }
 
 [dependency-groups]
 dev = ["pytest>=8"]

@@ -18,7 +18,6 @@ def config(tmp_path: Path) -> Path:
     path.write_text(
         f'[pipeline]\ndata_dir = "{tmp_path / "data"}"\n'
         f'[targets]\ntargets_csv = "{ROOT}/config/targets.csv"\nwatch_toml = "{ROOT}/config/watch.toml"\n'
-        "[extraction]\nocr = false\n"
     )
     return path
 
@@ -52,14 +51,6 @@ def test_rejecting_something_not_queued_is_a_usage_error(config: Path, capsys) -
 
 def test_a_missing_config_is_a_usage_error(tmp_path: Path, capsys) -> None:
     assert run(capsys, "--config", str(tmp_path / "nope.toml"), "status")[0] == EXIT_USAGE
-
-
-def test_run_refuses_to_start_on_a_machine_missing_its_ocr_tools(config: Path, capsys) -> None:
-    config.write_text(config.read_text().replace("ocr = false", 'ocr = true\nocr_languages = "ind+xxx"'))
-
-    code, _ = run(capsys, "--config", str(config), "run")  # returns before any network call
-
-    assert code == EXIT_PROBLEMS
 
 
 def test_export_v2_writes_a_complete_bundle_even_when_nothing_is_held(config: Path, tmp_path: Path, capsys) -> None:

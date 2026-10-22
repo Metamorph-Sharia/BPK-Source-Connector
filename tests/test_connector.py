@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import hashlib
 import json
-from pathlib import Path
 
 import pytest
 from fakes.memory import FakeGateway, MemoryCatalog
@@ -12,7 +11,6 @@ from fakes.memory import FakeGateway, MemoryCatalog
 from bpk_connector import BPKConnector
 from bpk_connector.application.dto import ExtractedText
 from bpk_connector.application.ports import Blocked, FileTooLarge, NotExtractable, Unavailable
-from bpk_connector.connector import EnvironmentNotReady
 from bpk_connector.domain.models import FileRef, Regulation, Relation, Target, TargetOrigin, Tier
 from bpk_connector.source_connector import Discovered, ItemFailed, SourceUnavailable, StoredFile
 
@@ -36,7 +34,7 @@ class MemoryStore:
 
 
 class FakeExtractor:
-    def extract(self, data: bytes) -> ExtractedText:
+    def extract(self, data: bytes, role="main") -> ExtractedText:
         if not data.startswith(b"%PDF"):
             raise NotExtractable("not a PDF: zip")
         return ExtractedText("<!-- page 1 -->\nUNDANG-UNDANG NOMOR 4 TAHUN 2023", 1, 0, "text_layer")
@@ -138,15 +136,3 @@ def test_a_file_that_is_not_a_document_is_delivered_without_text() -> None:
 
     assert fetched.metadata["files"][0]["text"] is None
     assert fetched.metadata["files"][0]["text_note"] == "not a PDF: zip"
-
-
-def test_a_machine_without_the_ocr_tools_refuses_to_start(tmp_path) -> None:
-    config = tmp_path / "pipeline.toml"
-    root = Path(__file__).resolve().parents[1]
-    config.write_text(
-        f'[targets]\ntargets_csv = "{root}/config/targets.csv"\nwatch_toml = "{root}/config/watch.toml"\n'
-        '[extraction]\nocr_languages = "ind+xxx"\n'
-    )
-
-    with pytest.raises(EnvironmentNotReady, match="xxx"):
-        BPKConnector({"config": str(config)})

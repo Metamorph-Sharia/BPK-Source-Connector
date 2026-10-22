@@ -15,7 +15,7 @@ from bpk_connector.application.ports import NotExtractable
 class EchoExtractor:
     """Pretends each PDF is one page holding its own bytes as text."""
 
-    def extract(self, data: bytes) -> ExtractedText:
+    def extract(self, data: bytes, role="main") -> ExtractedText:
         if not data.startswith(b"%PDF"):
             raise NotExtractable("not a PDF")
         return ExtractedText(f"<!-- page 1 -->\n{data.decode()}", 1, 0, "text_layer")
